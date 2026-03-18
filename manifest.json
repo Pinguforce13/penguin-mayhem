@@ -1,0 +1,37 @@
+{
+  "name": "Penguin Mayhem: Icebreakers",
+  "short_name": "Penguin Mayhem",
+  "description": "Een 3v3 arena brawler op breekbaar ijs met pinguïns",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050d1a",
+  "theme_color": "#0a1628",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230a1628' rx='32'/><text y='130' x='96' font-size='100' text-anchor='middle'>🐧</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a1628' rx='80'/><text y='360' x='256' font-size='280' text-anchor='middle'>🐧</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "nl",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Classes bekijken",
+      "url": "/#classes",
+      "description": "Bekijk alle pinguïn classes"
+    },
+    {
+      "name": "Game Modes",
+      "url": "/#modes",
+      "description": "Alle game modes"
+    }
+  ]
+}
