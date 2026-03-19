@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penguin Mayhem: Icebreakers — Prototype</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #050d1a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh;
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+#ui {
+  width: 800px; display: flex;
+  justify-content: space-between; align-items: center;
+  padding: 10px 0 8px;
+}
+.player-hud {
+  display: flex; flex-direction: column; gap: 4px; width: 220px;
+}
+.player-hud.right { align-items: flex-end; }
+.p-name { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.p1-name { color: #5ac8fa; }
+.p2-name { color: #ff7a5a; }
+.health-bar { width: 200px; height: 10px; background: #0a1828; border-radius: 5px; overflow: hidden; border: 1px solid #1a3a6a; }
+.health-fill { height: 100%; border-radius: 5px; transition: width .1s; }
+.p1-health { background: linear-gradient(90deg, #3a9fd8, #5ac8fa); }
+.p2-health { background: linear-gradient(90deg, #ff5a3a, #ff7a5a); }
+.p-score { font-size: 22px; font-weight: 900; }
+.p1-score { color: #5ac8fa; }
+.p2-score { color: #ff7a5a; }
+.p-status { font-size: 10px; color: #4a7a9a; letter-spacing: 1px; height: 14px; }
+.center-ui { text-align: center; }
+.round-label { font-size: 10px; color: #3a6a9a; letter-spacing: 2px; text-transform: uppercase; }
+.round-num { font-size: 28px; font-weight: 900; color: #cde8ff; font-family: monospace; }
+#canvas {
+  border: 1px solid #1a3a6a;
+  border-radius: 8px;
+  display: block;
+}
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,13,26,.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 10; gap: 16px;
+}
+#overlay h1 {
+  font-size: 48px; color: #cde8ff;
+  font-weight: 900; letter-spacing: 2px;
+}
+#overlay .sub { font-size: 16px; color: #5a8aaa; }
+#overlay .controls-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px; margin: 8px 0;
+}
+.ctrl-box {
+  background: #0d2040; border: 1px solid #1a3a6a;
+  border-radius: 14px; padding: 18px 22px;
+}
+.ctrl-box h3 { font-size: 14px; font-weight: 800; margin-bottom: 10px; letter-spacing: 1px; }
+.p1-box h3 { color: #5ac8fa; }
+.p2-box h3 { color: #ff7a5a; }
+.ctrl-row { font-size: 13px; color: #8ab4d4; margin: 4px 0; display: flex; gap: 8px; }
+.key {
+  background: #0a1830; border: 1px solid #2a5a8a;
+  border-radius: 6px; padding: 2px 8px;
+  font-family: monospace; font-size: 12px; color: #cde8ff;
+  min-width: 28px; text-align: center;
+}
+#start-btn {
+  background: linear-gradient(135deg, #3a9fd8, #5ac8fa);
+  color: #050d1a; border: none; border-radius: 14px;
+  padding: 14px 48px; font-size: 18px; font-weight: 900;
+  cursor: pointer; letter-spacing: 1px;
+  transition: transform .1s, opacity .1s;
+}
+#start-btn:hover { transform: scale(1.04); }
+#start-btn:active { transform: scale(.97); }
+.winner-text { font-size: 36px; font-weight: 900; }
+.p1-win { color: #5ac8fa; }
+.p2-win { color: #ff7a5a; }
+.draw-win { color: #f0c040; }
+#controls-hint {
+  position: fixed; bottom: 12px;
+  font-size: 11px; color: #2a4a6a;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div class="player-hud">
+    <div class="p-name p1-name">🐧 Speler 1</div>
+    <div class="health-bar"><div class="health-fill p1-health" id="p1-hp" style="width:100%"></div></div>
+    <div class="p-status" id="p1-status"></div>
+    <div class="p-score p1-score" id="p1-score">0</div>
+  </div>
+  <div class="center-ui">
+    <div class="round-label">Ronde</div>
+    <div class="round-num" id="round-num">1</div>
+  </div>
+  <div class="player-hud right">
+    <div class="p-name p2-name">Speler 2 🐧</div>
+    <div class="health-bar"><div class="health-fill p2-health" id="p2-hp" style="width:100%"></div></div>
+    <div class="p-status" id="p2-status"></div>
+    <div class="p-score p2-score" id="p2-score">0</div>
+  </div>
+</div>
+
+<canvas id="canvas" width="800" height="520"></canvas>
+<div id="controls-hint">WASD + F = Speler 1 &nbsp;|&nbsp; Pijltjes + L = Speler 2 &nbsp;|&nbsp; ESC = Pauze</div>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div style="font-size:64px;animation:bob 2s ease-in-out infinite">🐧</div>
+  <h1>PENGUIN MAYHEM</h1>
+  <div class="sub">Icebreakers — Lokaal 2-speler prototype</div>
+  <div class="controls-grid">
+    <div class="ctrl-box p1-box">
+      <h3>🐧 Speler 1 (Blauw)</h3>
+      <div class="ctrl-row"><span class="key">W</span> Omhoog / Springen</div>
+      <div class="ctrl-row"><span class="key">A</span> Links</div>
+      <div class="ctrl-row"><span class="key">D</span> Rechts</div>
+      <div class="ctrl-row"><span class="key">F</span> Schieten</div>
+    </div>
+    <div class="ctrl-box p2-box">
+      <h3>Speler 2 (Rood) 🐧</h3>
+      <div class="ctrl-row"><span class="key">↑</span> Omhoog / Springen</div>
+      <div class="ctrl-row"><span class="key">←</span> Links</div>
+      <div class="ctrl-row"><span class="key">→</span> Rechts</div>
+      <div class="ctrl-row"><span class="key">L</span> Schieten</div>
+    </div>
+  </div>
+  <div style="font-size:13px;color:#3a6a9a;text-align:center;max-width:400px">
+    🧊 Ijs breekt in 4 fases door aanvallen<br>
+    🌊 Val in het water → zwemmodus (5s timer)<br>
+    💀 Verlies alle health → ronde verloren<br>
+    🏆 Eerste speler met 3 ronden wint!
+  </div>
+  <button id="start-btn">▶ SPEEL NU</button>
+  <div id="winner-area"></div>
+</div>
+
+<style>
+@keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
+</style>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 520;
+
+// ── CONSTANTS
+const TILE = 40;
+const COLS = W / TILE; // 20
+const ROWS = 10;
+const WATER_Y = ROWS * TILE; // 400
+const GRAVITY = 0.45;
+const JUMP_FORCE = -10;
+const MOVE_SPEED = 3.2;
+const SWIM_SPEED = 2.2;
+const BULLET_SPEED = 7;
+const MAX_HP = 100;
+const WATER_DAMAGE_START = 5000; // ms in water before damage
+const WATER_DAMAGE_RATE = 8; // hp per second
+
+// Ice health per tile: 0=broken(water), 1-4 = intact phases
+// 4=perfect, 3=scratched, 2=cracked, 1=breaking
+let grid = [];
+let particles = [];
+let bullets = [];
+let ripples = [];
+
+// Scores
+let scores = [0, 0];
+let round = 1;
+let roundActive = false;
+let roundEndTimer = 0;
+let paused = false;
+
+// Players
+const PLAYER_DEFS = [
+  { color: '#5ac8fa', darkColor: '#1a6a9a', emoji: '🐧', swimColor: '#3a9fd8' },
+  { color: '#ff7a5a', darkColor: '#9a3a2a', emoji: '🐧', swimColor: '#ff5a3a' }
+];
+
+let players = [];
+
+function initGrid() {
+  grid = [];
+  for (let r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      // Bottom rows always solid, top rows have gaps
+      if (r < 6) {
+        // Upper area: floating platforms
+        grid[r][c] = (r === 5 && (c < 3 || (c > 7 && c < 12) || c > 16)) ? 4 :
+                     (r === 3 && (c > 4 && c < 9)) ? 4 :
+                     (r === 3 && (c > 11 && c < 16)) ? 4 :
+                     (r === 1 && (c > 7 && c < 13)) ? 4 : 0;
+      } else {
+        // Lower solid floor
+        grid[r][c] = 4;
+      }
+    }
+  }
+  // Ensure spawn areas are solid
+  // P1 spawns left, P2 right
+  for (let c = 0; c < 5; c++) grid[6][c] = 4;
+  for (let c = 15; c < 20; c++) grid[6][c] = 4;
+}
+
+function initPlayers() {
+  players = [
+    {
+      x: 80, y: 200, vx: 0, vy: 0,
+      w: 28, h: 32,
+      hp: MAX_HP, maxHp: MAX_HP,
+      onGround: false, inWater: false,
+      waterTimer: 0, swimDir: 0,
+      shootCooldown: 0,
+      facing: 1, // 1=right, -1=left
+      alive: true,
+      waterEntryY: 0,
+      color: PLAYER_DEFS[0].color,
+      darkColor: PLAYER_DEFS[0].darkColor,
+      swimColor: PLAYER_DEFS[0].swimColor,
+      idx: 0,
+      invincible: 0, // invincibility frames after getting hit
+      jumpBuffer: 0,
+      coyoteTime: 0,
+    },
+    {
+      x: 692, y: 200, vx: 0, vy: 0,
+      w: 28, h: 32,
+      hp: MAX_HP, maxHp: MAX_HP,
+      onGround: false, inWater: false,
+      waterTimer: 0, swimDir: 0,
+      shootCooldown: 0,
+      facing: -1,
+      alive: true,
+      waterEntryY: 0,
+      color: PLAYER_DEFS[1].color,
+      darkColor: PLAYER_DEFS[1].darkColor,
+      swimColor: PLAYER_DEFS[1].swimColor,
+      idx: 1,
+      invincible: 0,
+      jumpBuffer: 0,
+      coyoteTime: 0,
+    }
+  ];
+}
+
+// ── INPUT
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Escape') togglePause();
+  // Prevent page scroll
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+const P_CONTROLS = [
+  { left: 'KeyA', right: 'KeyD', up: 'KeyW', shoot: 'KeyF' },
+  { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', shoot: 'KeyL' }
+];
+
+// ── PHYSICS HELPERS
+function getTile(px, py) {
+  const c = Math.floor(px / TILE);
+  const r = Math.floor(py / TILE);
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return 0;
+  return grid[r][c];
+}
+
+function setTile(c, r, val) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+  grid[r][c] = val;
+}
+
+function damageTile(c, r, amount = 1) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+  if (grid[r][c] <= 0) return;
+  grid[r][c] = Math.max(0, grid[r][c] - amount);
+  // Particles
+  const tx = c * TILE + TILE/2, ty = r * TILE + TILE/2;
+  for (let i = 0; i < 6; i++) {
+    particles.push({
+      x: tx + (Math.random()-0.5)*TILE,
+      y: ty + (Math.random()-0.5)*TILE,
+      vx: (Math.random()-0.5)*4,
+      vy: (Math.random()-0.5)*4 - 1,
+      life: 40 + Math.random()*20,
+      maxLife: 60,
+      size: 3 + Math.random()*4,
+      color: iceColor(grid[r][c]+1)
+    });
+  }
+}
+
+function iceColor(phase) {
+  if (phase >= 4) return '#c8eeff';
+  if (phase === 3) return '#90c8e8';
+  if (phase === 2) return '#6090b8';
+  if (phase === 1) return '#405878';
+  return null;
+}
+
+function iceFillColor(phase) {
+  if (phase >= 4) return '#e8f8ff';
+  if (phase === 3) return '#b8ddf0';
+  if (phase === 2) return '#7aaac8';
+  if (phase === 1) return '#507090';
+  return null;
+}
+
+// ── PLAYER PHYSICS
+function updatePlayer(p, dt) {
+  if (!p.alive) return;
+  const ctrl = P_CONTROLS[p.idx];
+
+  p.invincible = Math.max(0, p.invincible - 1);
+  p.shootCooldown = Math.max(0, p.shootCooldown - 1);
+
+  const leftHeld  = keys[ctrl.left];
+  const rightHeld = keys[ctrl.right];
+  const upHeld    = keys[ctrl.up];
+  const shootHeld = keys[ctrl.shoot];
+
+  if (p.inWater) {
+    // ── SWIM MODE
+    p.waterTimer += dt;
+    p.vx *= 0.85;
+    p.vy *= 0.85;
+    if (leftHeld)  { p.vx -= 0.4; p.facing = -1; }
+    if (rightHeld) { p.vx += 0.4; p.facing =  1; }
+    if (upHeld)    { p.vy -= 0.5; }
+    else           { p.vy += 0.1; } // gentle sink
+
+    p.vx = Math.max(-SWIM_SPEED, Math.min(SWIM_SPEED, p.vx));
+    p.vy = Math.max(-SWIM_SPEED, Math.min(SWIM_SPEED, p.vy));
+
+    // Jump out of water
+    if (upHeld && p.y + p.h >= WATER_Y - 4 && p.vy < 0.5) {
+      p.vy = JUMP_FORCE * 1.1;
+      p.inWater = false;
+      p.waterTimer = 0;
+      splashEffect(p.x + p.w/2, WATER_Y);
+    }
+
+    // Water damage after 5s
+    if (p.waterTimer > WATER_DAMAGE_START) {
+      const dmg = WATER_DAMAGE_RATE * (dt / 1000);
+      hurtPlayer(p, dmg, null);
+    }
+    p.onGround = false;
+
+  } else {
+    // ── ICE MODE
+    p.coyoteTime = Math.max(0, p.coyoteTime - 1);
+    if (p.jumpBuffer > 0) p.jumpBuffer--;
+
+    // Horizontal
+    if (leftHeld)  { p.vx = Math.max(p.vx - 0.6, -MOVE_SPEED); p.facing = -1; }
+    if (rightHeld) { p.vx = Math.min(p.vx + 0.6,  MOVE_SPEED); p.facing =  1; }
+    if (!leftHeld && !rightHeld) p.vx *= 0.78;
+
+    // Jump
+    if (upHeld) p.jumpBuffer = 8;
+    if (p.jumpBuffer > 0 && (p.onGround || p.coyoteTime > 0)) {
+      p.vy = JUMP_FORCE;
+      p.onGround = false;
+      p.coyoteTime = 0;
+      p.jumpBuffer = 0;
+    }
+
+    // Gravity
+    p.vy += GRAVITY;
+    p.vy = Math.min(p.vy, 14);
+  }
+
+  // ── SHOOT
+  if (shootHeld && p.shootCooldown === 0) {
+    p.shootCooldown = 22;
+    bullets.push({
+      x: p.x + p.w/2 + p.facing * p.w/2,
+      y: p.y + p.h/2,
+      vx: BULLET_SPEED * p.facing,
+      vy: p.inWater ? (Math.random()-0.5)*1.5 : 0,
+      owner: p.idx,
+      life: 70,
+      color: p.color
+    });
+  }
+
+  // ── MOVE & COLLIDE (only on ice)
+  if (!p.inWater) {
+    moveAndCollide(p);
+  } else {
+    p.x += p.vx;
+    p.y += p.vy;
+    // Keep in water area
+    p.x = Math.max(0, Math.min(W - p.w, p.x));
+    p.y = Math.max(WATER_Y, Math.min(H - p.h - 2, p.y));
+  }
+
+  // ── FALL INTO WATER
+  if (!p.inWater && p.y + p.h >= WATER_Y) {
+    p.inWater = true;
+    p.waterTimer = 0;
+    p.y = WATER_Y;
+    p.vy = Math.min(p.vy * 0.4, 2);
+    splashEffect(p.x + p.w/2, WATER_Y);
+  }
+
+  // ── WALL BOUNDS
+  p.x = Math.max(0, Math.min(W - p.w, p.x));
+}
+
+function moveAndCollide(p) {
+  // Horizontal
+  p.x += p.vx;
+  p.x = Math.max(0, Math.min(W - p.w, p.x));
+
+  // Check horizontal tile collisions
+  const col1 = Math.floor(p.x / TILE);
+  const col2 = Math.floor((p.x + p.w - 1) / TILE);
+  const row1 = Math.floor(p.y / TILE);
+  const row2 = Math.floor((p.y + p.h - 1) / TILE);
+
+  for (let r = row1; r <= row2; r++) {
+    for (let c = col1; c <= col2; c++) {
+      if (getTile(c * TILE + TILE/2, r * TILE + TILE/2) > 0) {
+        if (grid[r] && grid[r][c] > 0) {
+          if (p.vx > 0) p.x = c * TILE - p.w;
+          else if (p.vx < 0) p.x = (c + 1) * TILE;
+          p.vx = 0;
+        }
+      }
+    }
+  }
+
+  const prevOnGround = p.onGround;
+  p.onGround = false;
+
+  // Vertical
+  p.y += p.vy;
+
+  const col1b = Math.floor(p.x / TILE);
+  const col2b = Math.floor((p.x + p.w - 1) / TILE);
+  const row1b = Math.floor(p.y / TILE);
+  const row2b = Math.floor((p.y + p.h - 1) / TILE);
+
+  for (let r = row1b; r <= row2b; r++) {
+    for (let c = col1b; c <= col2b; c++) {
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] > 0) {
+        if (p.vy > 0) {
+          p.y = r * TILE - p.h;
+          p.vy = 0;
+          p.onGround = true;
+          p.coyoteTime = 8;
+          // Damage tile under player (weight mechanic — very slow)
+          if (Math.random() < 0.003) damageTile(c, r, 1);
+        } else if (p.vy < 0) {
+          p.y = (r + 1) * TILE;
+          p.vy = 0;
+        }
+      }
+    }
+  }
+
+  if (prevOnGround && !p.onGround) p.coyoteTime = 8;
+}
+
+// ── BULLETS
+function updateBullets() {
+  bullets = bullets.filter(b => b.life > 0);
+  for (const b of bullets) {
+    b.x += b.vx;
+    b.y += b.vy;
+    b.life--;
+
+    // Hit tiles
+    const c = Math.floor(b.x / TILE);
+    const r = Math.floor(b.y / TILE);
+    if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] > 0) {
+      damageTile(c, r, 1);
+      spawnBulletHit(b.x, b.y, b.color);
+      b.life = 0;
+      continue;
+    }
+
+    // Hit players
+    for (const p of players) {
+      if (!p.alive || p.idx === b.owner || p.invincible > 0) continue;
+      if (b.x > p.x && b.x < p.x + p.w && b.y > p.y && b.y < p.y + p.h) {
+        hurtPlayer(p, 18, b);
+        spawnBulletHit(b.x, b.y, b.color);
+        b.life = 0;
+        break;
+      }
+    }
+  }
+}
+
+function hurtPlayer(p, dmg, b) {
+  if (p.invincible > 0) return;
+  p.hp = Math.max(0, p.hp - dmg);
+  p.invincible = 25;
+  if (b) { p.vx += b.vx * 0.25; p.vy -= 2; }
+  // Flash
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: p.x + Math.random()*p.w,
+      y: p.y + Math.random()*p.h,
+      vx: (Math.random()-0.5)*5,
+      vy: (Math.random()-0.5)*5 - 2,
+      life: 25, maxLife: 25,
+      size: 4 + Math.random()*4,
+      color: p.color
+    });
+  }
+  if (p.hp <= 0) killPlayer(p);
+}
+
+function killPlayer(p) {
+  p.alive = false;
+  p.hp = 0;
+  // Big death particles
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      x: p.x + p.w/2, y: p.y + p.h/2,
+      vx: (Math.random()-0.5)*10,
+      vy: Math.random()*-8 - 2,
+      life: 60 + Math.random()*30, maxLife: 90,
+      size: 6 + Math.random()*8,
+      color: p.color
+    });
+  }
+  setTimeout(checkRoundEnd, 500);
+}
+
+function checkRoundEnd() {
+  if (!roundActive) return;
+  const alive = players.filter(p => p.alive);
+  if (alive.length <= 1) {
+    roundActive = false;
+    if (alive.length === 1) {
+      scores[alive[0].idx]++;
+      updateScoreUI();
+    }
+    roundEndTimer = 120;
+  }
+}
+
+// ── EFFECTS
+function splashEffect(x, y) {
+  ripples.push({ x, y, r: 5, maxR: 40, life: 30, maxLife: 30 });
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * Math.PI;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * (2 + Math.random()*3),
+      vy: -Math.sin(angle) * (3 + Math.random()*4),
+      life: 25 + Math.random()*15, maxLife: 40,
+      size: 3 + Math.random()*5,
+      color: '#5ac8fa'
+    });
+  }
+}
+
+function spawnBulletHit(x, y, color) {
+  for (let i = 0; i < 5; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6,
+      life: 15 + Math.random()*10, maxLife: 25,
+      size: 2 + Math.random()*3,
+      color
+    });
+  }
+}
+
+// ── DRAW
+function drawBackground() {
+  // Deep water
+  const waterGrad = ctx.createLinearGradient(0, WATER_Y, 0, H);
+  waterGrad.addColorStop(0, '#0a2a50');
+  waterGrad.addColorStop(1, '#040e1e');
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, WATER_Y, W, H - WATER_Y);
+
+  // Water shimmer lines
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  const t = Date.now() * 0.001;
+  for (let i = 0; i < 8; i++) {
+    const y = WATER_Y + 20 + i * 16 + Math.sin(t + i * 0.7) * 4;
+    ctx.strokeStyle = '#5ac8fa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Water surface line
+  ctx.strokeStyle = '#1a5a9a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, WATER_Y);
+  ctx.lineTo(W, WATER_Y);
+  ctx.stroke();
+
+  // Sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, WATER_Y);
+  skyGrad.addColorStop(0, '#050d1a');
+  skyGrad.addColorStop(1, '#0a1a30');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, WATER_Y);
+
+  // Stars
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = '#ffffff';
+  // Static stars (seed-based)
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 137.5) % W);
+    const sy = ((i * 97.3) % (WATER_Y - 60));
+    const size = (i % 3 === 0) ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.arc(sx, sy, size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawGrid() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const phase = grid[r][c];
+      if (phase <= 0) continue;
+      const x = c * TILE, y = r * TILE;
+      const fill = iceFillColor(phase);
+      const stroke = iceColor(phase);
+
+      // Fill
+      ctx.fillStyle = fill;
+      ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+
+      // Top shine
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillRect(x + 2, y + 2, TILE - 4, 6);
+
+      // Border
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+
+      // Cracks based on phase
+      if (phase <= 3) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(20,60,100,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (phase <= 3) {
+          ctx.moveTo(x+8,  y+12); ctx.lineTo(x+22, y+20);
+          ctx.moveTo(x+22, y+20); ctx.lineTo(x+16, y+32);
+        }
+        if (phase <= 2) {
+          ctx.moveTo(x+28, y+8);  ctx.lineTo(x+18, y+22);
+          ctx.moveTo(x+6,  y+28); ctx.lineTo(x+14, y+18);
+        }
+        if (phase <= 1) {
+          ctx.moveTo(x+4,  y+8);  ctx.lineTo(x+36, y+36);
+          ctx.moveTo(x+36, y+4);  ctx.lineTo(x+4,  y+36);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+function drawPlayer(p) {
+  if (!p.alive) return;
+
+  ctx.save();
+
+  // Invincibility flash
+  if (p.invincible > 0 && Math.floor(p.invincible / 3) % 2 === 0) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  const cx = p.x + p.w/2;
+  const cy = p.y + p.h/2;
+
+  if (p.inWater) {
+    // SWIM: only head above/at water line, wavy body below
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.ellipse(cx, p.y + 10, p.w*0.45, p.h*0.38, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#050d1a';
+    ctx.beginPath(); ctx.arc(cx + p.facing*5, p.y + 8, 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(cx + p.facing*5 + 1, p.y + 7, 1, 0, Math.PI*2); ctx.fill();
+
+    // Water splash around body
+    ctx.strokeStyle = p.swimColor;
+    ctx.lineWidth = 2;
+    const t = Date.now()*0.005;
+    ctx.beginPath();
+    ctx.arc(cx, WATER_Y, 14 + Math.sin(t)*3, Math.PI, 0);
+    ctx.stroke();
+
+    // Water timer bar above head
+    const timerPct = Math.min(1, p.waterTimer / WATER_DAMAGE_START);
+    if (timerPct > 0.1) {
+      ctx.fillStyle = timerPct > 0.8 ? '#ff4040' : '#f0c040';
+      ctx.fillRect(p.x, p.y - 10, p.w * timerPct, 4);
+      ctx.strokeStyle = '#0a1830';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(p.x, p.y - 10, p.w, 4);
+    }
+
+  } else {
+    // LAND: full penguin body
+    // Body
+    ctx.fillStyle = '#1a1a2a';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 4, p.w*0.48, p.h*0.48, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Belly
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 6, p.w*0.28, p.h*0.32, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = '#1a1a2a';
+    ctx.beginPath();
+    ctx.arc(cx, p.y + 9, p.w*0.38, 0, Math.PI*2);
+    ctx.fill();
+
+    // Eyes
+    const eyeX = cx + p.facing * 5;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(eyeX, p.y + 7, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#050d1a';
+    ctx.beginPath(); ctx.arc(eyeX + p.facing, p.y + 7, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(eyeX + p.facing + 1, p.y + 6, 1, 0, Math.PI*2); ctx.fill();
+
+    // Beak
+    ctx.fillStyle = '#f0a030';
+    ctx.beginPath();
+    ctx.moveTo(cx + p.facing*9, p.y + 10);
+    ctx.lineTo(cx + p.facing*14, p.y + 12);
+    ctx.lineTo(cx + p.facing*9, p.y + 14);
+    ctx.fill();
+
+    // Feet
+    ctx.fillStyle = '#f0a030';
+    ctx.beginPath(); ctx.ellipse(cx - 7, p.y + p.h - 2, 6, 3, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 7, p.y + p.h - 2, 6, 3,  0.3, 0, Math.PI*2); ctx.fill();
+
+    // Player indicator dot
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(cx, p.y - 6, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Health bar above player
+  const hpPct = p.hp / p.maxHp;
+  ctx.fillStyle = '#0a1828';
+  ctx.fillRect(p.x, p.y - 18, p.w, 5);
+  ctx.fillStyle = hpPct > 0.5 ? '#3ad870' : hpPct > 0.25 ? '#f0c040' : '#f04040';
+  ctx.fillRect(p.x, p.y - 18, p.w * hpPct, 5);
+  ctx.strokeStyle = '#1a3a6a';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(p.x, p.y - 18, p.w, 5);
+
+  ctx.restore();
+}
+
+function drawBullets() {
+  for (const b of bullets) {
+    ctx.save();
+    ctx.globalAlpha = b.life / 70;
+    ctx.fillStyle = b.color;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = (p.life / p.maxLife) * 0.9;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawRipples() {
+  for (const r of ripples) {
+    ctx.save();
+    ctx.globalAlpha = (r.life / r.maxLife) * 0.5;
+    ctx.strokeStyle = '#5ac8fa';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(r.x, r.y, r.r, r.r * 0.3, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawWaterLabel() {
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#5ac8fa';
+  ctx.font = '700 11px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('🌊  WATER  —  ZWEMMODUS ACTIEF  🌊', W/2, WATER_Y + 16);
+  ctx.restore();
+}
+
+function drawPauseOverlay() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,13,26,.8)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#cde8ff';
+  ctx.font = '900 36px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('⏸ PAUZE', W/2, H/2 - 10);
+  ctx.font = '400 14px Segoe UI';
+  ctx.fillStyle = '#5a8aaa';
+  ctx.fillText('Druk ESC om verder te spelen', W/2, H/2 + 24);
+  ctx.restore();
+}
+
+// ── UPDATE LOOP
+let lastTime = 0;
+let frameCount = 0;
+
+function update(timestamp) {
+  const dt = Math.min(timestamp - lastTime, 50);
+  lastTime = timestamp;
+
+  if (!roundActive || paused) {
+    if (roundEndTimer > 0) {
+      roundEndTimer--;
+      if (roundEndTimer <= 0) nextRound();
+    }
+    requestAnimationFrame(update);
+    return;
+  }
+
+  // Update players
+  for (const p of players) updatePlayer(p, dt);
+
+  // Update bullets
+  updateBullets();
+
+  // Update particles
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.12;
+    p.vx *= 0.97;
+    p.life--;
+  }
+
+  // Update ripples
+  ripples = ripples.filter(r => r.life > 0);
+  for (const r of ripples) {
+    r.r += (r.maxR - r.r) * 0.12;
+    r.life--;
+  }
+
+  // Update UI
+  updateHUD();
+
+  // Draw
+  draw();
+
+  requestAnimationFrame(update);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawGrid();
+  drawRipples();
+  drawBullets();
+  for (const p of players) drawPlayer(p);
+  drawParticles();
+  drawWaterLabel();
+  if (paused) drawPauseOverlay();
+}
+
+// ── HUD
+function updateHUD() {
+  for (let i = 0; i < 2; i++) {
+    const p = players[i];
+    document.getElementById(`p${i+1}-hp`).style.width = (p.hp / p.maxHp * 100) + '%';
+    let status = '';
+    if (!p.alive) status = '💀 KO';
+    else if (p.inWater) {
+      const remaining = Math.max(0, WATER_DAMAGE_START - p.waterTimer);
+      status = `🌊 WATER — ${(remaining/1000).toFixed(1)}s`;
+    }
+    document.getElementById(`p${i+1}-status`).textContent = status;
+  }
+}
+
+function updateScoreUI() {
+  document.getElementById('p1-score').textContent = scores[0];
+  document.getElementById('p2-score').textContent = scores[1];
+  document.getElementById('round-num').textContent = round;
+}
+
+// ── ROUND / GAME FLOW
+function startRound() {
+  initGrid();
+  initPlayers();
+  bullets = [];
+  particles = [];
+  ripples = [];
+  roundActive = true;
+  roundEndTimer = 0;
+  updateScoreUI();
+}
+
+function nextRound() {
+  // Check win condition (best of 5 → 3 wins)
+  if (scores[0] >= 3 || scores[1] >= 3) {
+    showGameOver();
+    return;
+  }
+  round++;
+  startRound();
+}
+
+function showGameOver() {
+  const overlay = document.getElementById('overlay');
+  const wa = document.getElementById('winner-area');
+  overlay.style.display = 'flex';
+  let winnerHtml = '';
+  if (scores[0] > scores[1]) {
+    winnerHtml = `<div class="winner-text p1-win">🏆 Speler 1 wint het spel!</div>`;
+  } else if (scores[1] > scores[0]) {
+    winnerHtml = `<div class="winner-text p2-win">🏆 Speler 2 wint het spel!</div>`;
+  } else {
+    winnerHtml = `<div class="winner-text draw-win">🤝 Gelijkspel!</div>`;
+  }
+  wa.innerHTML = winnerHtml;
+  document.getElementById('start-btn').textContent = '▶ OPNIEUW SPELEN';
+  scores = [0, 0];
+  round = 1;
+}
+
+function togglePause() {
+  if (!roundActive) return;
+  paused = !paused;
+}
+
+// ── START
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('winner-area').innerHTML = '';
+  scores = [0, 0];
+  round = 1;
+  startRound();
+  requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(update); });
+});
+
+// Initial draw
+drawBackground();
+</script>
+</body>
+</html>
