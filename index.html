@@ -3,1002 +3,412 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Mayhem: Icebreakers — Prototype</title>
+<title>Penguin Mayhem: Icebreakers</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  background: #050d1a;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  min-height: 100vh;
-  font-family: 'Segoe UI', sans-serif;
-  overflow: hidden;
-  user-select: none;
+  background:#050d1a;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  height:100vh; overflow:hidden;
+  font-family:'Segoe UI',sans-serif;
+  user-select:none;
 }
-#ui {
-  width: 800px; display: flex;
-  justify-content: space-between; align-items: center;
-  padding: 10px 0 8px;
+#canvas { display:block; }
+
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:12px 16px; pointer-events:none; z-index:10;
 }
-.player-hud {
-  display: flex; flex-direction: column; gap: 4px; width: 220px;
+.player-card {
+  background:rgba(5,13,26,.8);
+  border:1px solid #1a3a6a; border-radius:12px;
+  padding:8px 12px; display:flex; align-items:center; gap:8px;
+  backdrop-filter:blur(8px); transition:opacity .3s;
 }
-.player-hud.right { align-items: flex-end; }
-.p-name { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-.p1-name { color: #5ac8fa; }
-.p2-name { color: #ff7a5a; }
-.health-bar { width: 200px; height: 10px; background: #0a1828; border-radius: 5px; overflow: hidden; border: 1px solid #1a3a6a; }
-.health-fill { height: 100%; border-radius: 5px; transition: width .1s; }
-.p1-health { background: linear-gradient(90deg, #3a9fd8, #5ac8fa); }
-.p2-health { background: linear-gradient(90deg, #ff5a3a, #ff7a5a); }
-.p-score { font-size: 22px; font-weight: 900; }
-.p1-score { color: #5ac8fa; }
-.p2-score { color: #ff7a5a; }
-.p-status { font-size: 10px; color: #4a7a9a; letter-spacing: 1px; height: 14px; }
-.center-ui { text-align: center; }
-.round-label { font-size: 10px; color: #3a6a9a; letter-spacing: 2px; text-transform: uppercase; }
-.round-num { font-size: 28px; font-weight: 900; color: #cde8ff; font-family: monospace; }
-#canvas {
-  border: 1px solid #1a3a6a;
-  border-radius: 8px;
-  display: block;
+.player-card.dead { opacity:.3; }
+.pc-emoji { font-size:18px; }
+.pc-info { display:flex; flex-direction:column; gap:3px; }
+.pc-name { font-size:11px; font-weight:800; letter-spacing:.5px; }
+.pc-bar { width:72px; height:5px; background:#0a1828; border-radius:3px; overflow:hidden; }
+.pc-fill { height:100%; border-radius:3px; transition:width .1s; }
+.alive-count {
+  background:rgba(5,13,26,.8); border:1px solid #1a3a6a;
+  border-radius:12px; padding:8px 16px; text-align:center;
+  backdrop-filter:blur(8px);
 }
+.alive-num { font-size:26px; font-weight:900; color:#cde8ff; line-height:1; }
+.alive-lbl { font-size:10px; color:#3a6a9a; letter-spacing:1px; text-transform:uppercase; }
+
 #overlay {
-  position: fixed; inset: 0;
-  background: rgba(5,13,26,.92);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  z-index: 10; gap: 16px;
+  position:fixed; inset:0; background:rgba(5,13,26,.93);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  z-index:20; gap:14px;
 }
-#overlay h1 {
-  font-size: 48px; color: #cde8ff;
-  font-weight: 900; letter-spacing: 2px;
+#overlay h1 { font-size:48px; font-weight:900; color:#cde8ff; letter-spacing:2px; text-align:center; line-height:1.1; }
+.sub { font-size:15px; color:#5a8aaa; text-align:center; }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:420px; width:100%; }
+.info-box { background:#0d2040; border:1px solid #1a3a6a; border-radius:14px; padding:14px 16px; font-size:13px; color:#8ab4d4; line-height:1.8; }
+.info-box h3 { font-size:12px; font-weight:800; color:#cde8ff; margin-bottom:6px; letter-spacing:1px; }
+#play-btn {
+  background:linear-gradient(135deg,#3a9fd8,#5ac8fa); color:#050d1a;
+  border:none; border-radius:14px; padding:14px 52px;
+  font-size:18px; font-weight:900; cursor:pointer; letter-spacing:1px;
+  transition:transform .1s; margin-top:4px;
 }
-#overlay .sub { font-size: 16px; color: #5a8aaa; }
-#overlay .controls-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 24px; margin: 8px 0;
-}
-.ctrl-box {
-  background: #0d2040; border: 1px solid #1a3a6a;
-  border-radius: 14px; padding: 18px 22px;
-}
-.ctrl-box h3 { font-size: 14px; font-weight: 800; margin-bottom: 10px; letter-spacing: 1px; }
-.p1-box h3 { color: #5ac8fa; }
-.p2-box h3 { color: #ff7a5a; }
-.ctrl-row { font-size: 13px; color: #8ab4d4; margin: 4px 0; display: flex; gap: 8px; }
-.key {
-  background: #0a1830; border: 1px solid #2a5a8a;
-  border-radius: 6px; padding: 2px 8px;
-  font-family: monospace; font-size: 12px; color: #cde8ff;
-  min-width: 28px; text-align: center;
-}
-#start-btn {
-  background: linear-gradient(135deg, #3a9fd8, #5ac8fa);
-  color: #050d1a; border: none; border-radius: 14px;
-  padding: 14px 48px; font-size: 18px; font-weight: 900;
-  cursor: pointer; letter-spacing: 1px;
-  transition: transform .1s, opacity .1s;
-}
-#start-btn:hover { transform: scale(1.04); }
-#start-btn:active { transform: scale(.97); }
-.winner-text { font-size: 36px; font-weight: 900; }
-.p1-win { color: #5ac8fa; }
-.p2-win { color: #ff7a5a; }
-.draw-win { color: #f0c040; }
-#controls-hint {
-  position: fixed; bottom: 12px;
-  font-size: 11px; color: #2a4a6a;
-  letter-spacing: 1px;
-}
+#play-btn:hover { transform:scale(1.04); }
+#play-btn:active { transform:scale(.97); }
+#result-text { font-size:28px; font-weight:900; text-align:center; min-height:40px; }
+.win { color:#5ac8fa; } .lose { color:#ff7a5a; }
+
+#hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); font-size:11px; color:#1a3a5a; letter-spacing:1px; pointer-events:none; white-space:nowrap; }
+@keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
 </style>
 </head>
 <body>
+<canvas id="canvas"></canvas>
 
-<div id="ui">
-  <div class="player-hud">
-    <div class="p-name p1-name">🐧 Speler 1</div>
-    <div class="health-bar"><div class="health-fill p1-health" id="p1-hp" style="width:100%"></div></div>
-    <div class="p-status" id="p1-status"></div>
-    <div class="p-score p1-score" id="p1-score">0</div>
-  </div>
-  <div class="center-ui">
-    <div class="round-label">Ronde</div>
-    <div class="round-num" id="round-num">1</div>
-  </div>
-  <div class="player-hud right">
-    <div class="p-name p2-name">Speler 2 🐧</div>
-    <div class="health-bar"><div class="health-fill p2-health" id="p2-hp" style="width:100%"></div></div>
-    <div class="p-status" id="p2-status"></div>
-    <div class="p-score p2-score" id="p2-score">0</div>
-  </div>
+<div id="hud">
+  <div id="hud-left" style="display:flex;flex-direction:column;gap:6px"></div>
+  <div class="alive-count"><div class="alive-num" id="alive-num">5</div><div class="alive-lbl">over</div></div>
+  <div id="hud-right" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"></div>
 </div>
 
-<canvas id="canvas" width="800" height="520"></canvas>
-<div id="controls-hint">WASD + F = Speler 1 &nbsp;|&nbsp; Pijltjes + L = Speler 2 &nbsp;|&nbsp; ESC = Pauze</div>
-
-<!-- OVERLAY -->
 <div id="overlay">
-  <div style="font-size:64px;animation:bob 2s ease-in-out infinite">🐧</div>
-  <h1>PENGUIN MAYHEM</h1>
-  <div class="sub">Icebreakers — Lokaal 2-speler prototype</div>
-  <div class="controls-grid">
-    <div class="ctrl-box p1-box">
-      <h3>🐧 Speler 1 (Blauw)</h3>
-      <div class="ctrl-row"><span class="key">W</span> Omhoog / Springen</div>
-      <div class="ctrl-row"><span class="key">A</span> Links</div>
-      <div class="ctrl-row"><span class="key">D</span> Rechts</div>
-      <div class="ctrl-row"><span class="key">F</span> Schieten</div>
-    </div>
-    <div class="ctrl-box p2-box">
-      <h3>Speler 2 (Rood) 🐧</h3>
-      <div class="ctrl-row"><span class="key">↑</span> Omhoog / Springen</div>
-      <div class="ctrl-row"><span class="key">←</span> Links</div>
-      <div class="ctrl-row"><span class="key">→</span> Rechts</div>
-      <div class="ctrl-row"><span class="key">L</span> Schieten</div>
-    </div>
+  <div style="font-size:68px;animation:bob 2s ease-in-out infinite">🐧</div>
+  <h1>PENGUIN MAYHEM<br><span style="font-size:26px;color:#5ac8fa">ICEBREAKERS</span></h1>
+  <div class="sub">Showdown — Last Penguin Standing</div>
+  <div class="info-grid">
+    <div class="info-box"><h3>🏄 JOU — SURFER</h3>Pijltjestoetsen = bewegen<br>Spatie = schieten<br>Super snel over ijs!</div>
+    <div class="info-box"><h3>🤖 4 BOTS</h3>🪖 Soldier — veel damage<br>🧊 Ice Mage — bevriest<br>🛡️ Tank — veel health</div>
+    <div class="info-box"><h3>🧊 IJS MECHANIC</h3>Kogels breken het ijs<br>4 fases → dan water<br>Val je erin? Je bent dood!</div>
+    <div class="info-box"><h3>🏆 DOEL</h3>Wees de laatste pinguïn<br>die nog op het ijs staat.<br>Schiet, ontwijkt, overleef!</div>
   </div>
-  <div style="font-size:13px;color:#3a6a9a;text-align:center;max-width:400px">
-    🧊 Ijs breekt in 4 fases door aanvallen<br>
-    🌊 Val in het water → zwemmodus (5s timer)<br>
-    💀 Verlies alle health → ronde verloren<br>
-    🏆 Eerste speler met 3 ronden wint!
-  </div>
-  <button id="start-btn">▶ SPEEL NU</button>
-  <div id="winner-area"></div>
+  <div id="result-text"></div>
+  <button id="play-btn">▶ SPEEL</button>
 </div>
 
-<style>
-@keyframes bob { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-12px) rotate(4deg)} }
-</style>
+<div id="hint">↑↓←→ bewegen &nbsp;|&nbsp; SPATIE schieten</div>
 
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const W = 800, H = 520;
+let SW = window.innerWidth, SH = window.innerHeight;
+canvas.width = SW; canvas.height = SH;
+window.addEventListener('resize', () => { SW=window.innerWidth; SH=window.innerHeight; canvas.width=SW; canvas.height=SH; });
 
-// ── CONSTANTS
-const TILE = 40;
-const COLS = W / TILE; // 20
-const ROWS = 10;
-const WATER_Y = ROWS * TILE; // 400
-const GRAVITY = 0.45;
-const JUMP_FORCE = -10;
-const MOVE_SPEED = 3.2;
-const SWIM_SPEED = 2.2;
-const BULLET_SPEED = 7;
-const MAX_HP = 100;
-const WATER_DAMAGE_START = 5000; // ms in water before damage
-const WATER_DAMAGE_RATE = 8; // hp per second
+// ── ISO CONFIG
+const TW = 64, TH = 32, TD = 20;
+const GR = 16, GC = 16;
 
-// Ice health per tile: 0=broken(water), 1-4 = intact phases
-// 4=perfect, 3=scratched, 2=cracked, 1=breaking
-let grid = [];
-let particles = [];
-let bullets = [];
-let ripples = [];
-
-// Scores
-let scores = [0, 0];
-let round = 1;
-let roundActive = false;
-let roundEndTimer = 0;
-let paused = false;
-
-// Players
-const PLAYER_DEFS = [
-  { color: '#5ac8fa', darkColor: '#1a6a9a', emoji: '🐧', swimColor: '#3a9fd8' },
-  { color: '#ff7a5a', darkColor: '#9a3a2a', emoji: '🐧', swimColor: '#ff5a3a' }
-];
-
-let players = [];
-
-function initGrid() {
-  grid = [];
-  for (let r = 0; r < ROWS; r++) {
-    grid[r] = [];
-    for (let c = 0; c < COLS; c++) {
-      // Bottom rows always solid, top rows have gaps
-      if (r < 6) {
-        // Upper area: floating platforms
-        grid[r][c] = (r === 5 && (c < 3 || (c > 7 && c < 12) || c > 16)) ? 4 :
-                     (r === 3 && (c > 4 && c < 9)) ? 4 :
-                     (r === 3 && (c > 11 && c < 16)) ? 4 :
-                     (r === 1 && (c > 7 && c < 13)) ? 4 : 0;
-      } else {
-        // Lower solid floor
-        grid[r][c] = 4;
-      }
-    }
-  }
-  // Ensure spawn areas are solid
-  // P1 spawns left, P2 right
-  for (let c = 0; c < 5; c++) grid[6][c] = 4;
-  for (let c = 15; c < 20; c++) grid[6][c] = 4;
+function iso(c, r) {
+  const cx = SW/2, cy = SH/2 - 30;
+  return { x: cx + (c-r)*(TW/2), y: cy + (c+r)*(TH/2) };
 }
 
-function initPlayers() {
-  players = [
-    {
-      x: 80, y: 200, vx: 0, vy: 0,
-      w: 28, h: 32,
-      hp: MAX_HP, maxHp: MAX_HP,
-      onGround: false, inWater: false,
-      waterTimer: 0, swimDir: 0,
-      shootCooldown: 0,
-      facing: 1, // 1=right, -1=left
-      alive: true,
-      waterEntryY: 0,
-      color: PLAYER_DEFS[0].color,
-      darkColor: PLAYER_DEFS[0].darkColor,
-      swimColor: PLAYER_DEFS[0].swimColor,
-      idx: 0,
-      invincible: 0, // invincibility frames after getting hit
-      jumpBuffer: 0,
-      coyoteTime: 0,
-    },
-    {
-      x: 692, y: 200, vx: 0, vy: 0,
-      w: 28, h: 32,
-      hp: MAX_HP, maxHp: MAX_HP,
-      onGround: false, inWater: false,
-      waterTimer: 0, swimDir: 0,
-      shootCooldown: 0,
-      facing: -1,
-      alive: true,
-      waterEntryY: 0,
-      color: PLAYER_DEFS[1].color,
-      darkColor: PLAYER_DEFS[1].darkColor,
-      swimColor: PLAYER_DEFS[1].swimColor,
-      idx: 1,
-      invincible: 0,
-      jumpBuffer: 0,
-      coyoteTime: 0,
-    }
-  ];
+// ── GRID
+let grid = [], gfx = [];
+function initGrid() {
+  grid = []; gfx = [];
+  for (let r=0;r<GR;r++) { grid[r]=[]; gfx[r]=[]; for (let c=0;c<GC;c++) { const edge=r===0||r===GR-1||c===0||c===GC-1; grid[r][c]=edge?4:Math.random()<0.06?0:4; gfx[r][c]=0; } }
+}
+function solid(r,c) { return r>=0&&r<GR&&c>=0&&c<GC&&grid[r][c]>0; }
+function dmgTile(r,c,n=1) { if(!solid(r,c))return; grid[r][c]=Math.max(0,grid[r][c]-n); gfx[r][c]=8; iceParticles(r,c); }
+
+// ── COLORS
+const TOPS  = ['#e8f8ff','#b8ddf0','#7aaac8','#507090'];
+const LEFTS = ['#a0c8e0','#78a8c0','#507898','#2e4e68'];
+const RIGHTS= ['#88b8d0','#6898b0','#486888','#263e58'];
+function icecol(p) { const i=Math.max(0,p-1); return {t:TOPS[i],l:LEFTS[i],r:RIGHTS[i]}; }
+
+// ── PARTICLES
+let parts = [];
+function iceParticles(r,c) {
+  const s=iso(c+.5,r+.5);
+  for(let i=0;i<7;i++) { const a=Math.random()*Math.PI*2,sp=1.5+Math.random()*3; parts.push({x:s.x+(Math.random()-.5)*20,y:s.y+(Math.random()-.5)*10,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp*.5-2,life:25+Math.random()*20,ml:45,sz:3+Math.random()*4,col:TOPS[Math.max(0,(grid[r][c]||1)-1)]}); }
+}
+function hitParticles(x,y,col) { for(let i=0;i<6;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*3;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s*.5-1,life:15+Math.random()*10,ml:25,sz:3+Math.random()*3,col});} }
+
+// ── CLASSES
+const CDEFS = {
+  surfer: {color:'#5ac8fa',hp:80, spd:3.8,fr:25,dmg:14,bspd:6.5,name:'Surfer'},
+  soldier:{color:'#ff9a5a',hp:90, spd:2.6,fr:18,dmg:20,bspd:7,  name:'Soldier'},
+  mage:   {color:'#a080f8',hp:70, spd:2.4,fr:32,dmg:24,bspd:5,  name:'Ice Mage'},
+  tank:   {color:'#f0c040',hp:160,spd:1.8,fr:42,dmg:14,bspd:5,  name:'Tank'},
+};
+
+// ── PLAYERS
+let players=[], bullets=[];
+function spawnAll() {
+  players=[]; bullets=[];
+  const sp=[{r:1.5,c:1.5},{r:1.5,c:14.5},{r:14.5,c:1.5},{r:14.5,c:14.5},{r:7.5,c:7.5}];
+  const cfg=[{cls:'surfer',isP:true},{cls:'soldier',isP:false},{cls:'mage',isP:false},{cls:'tank',isP:false},{cls:'soldier',isP:false}];
+  cfg.forEach((cf,i)=>{
+    const d=CDEFS[cf.cls], s=sp[i];
+    players.push({gr:s.r,gc:s.c,vr:0,vc:0,cls:cf.cls,isP:cf.isP,hp:d.hp,mhp:d.hp,spd:d.spd,fr:d.fr,dmg:d.dmg,bspd:d.bspd,col:d.col,name:cf.isP?'JIJ':d.name,alive:true,cd:0,inv:0,fac:{r:0,c:1},frz:0,ait:0,aid:{r:0,c:0},bob:Math.random()*Math.PI*2});
+  });
 }
 
 // ── INPUT
-const keys = {};
-window.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (e.code === 'Escape') togglePause();
-  // Prevent page scroll
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-});
-window.addEventListener('keyup', e => { keys[e.code] = false; });
+const K={};
+window.addEventListener('keydown',e=>{K[e.code]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();});
+window.addEventListener('keyup',e=>K[e.code]=false);
 
-const P_CONTROLS = [
-  { left: 'KeyA', right: 'KeyD', up: 'KeyW', shoot: 'KeyF' },
-  { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', shoot: 'KeyL' }
-];
+// ── GAME LOOP
+let running=false,fid=null,lt=0;
 
-// ── PHYSICS HELPERS
-function getTile(px, py) {
-  const c = Math.floor(px / TILE);
-  const r = Math.floor(py / TILE);
-  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return 0;
-  return grid[r][c];
-}
+function update(ts) {
+  const dt=Math.min(ts-lt,50); lt=ts;
+  if(!running){fid=requestAnimationFrame(update);return;}
 
-function setTile(c, r, val) {
-  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
-  grid[r][c] = val;
-}
+  for(const p of players) {
+    if(!p.alive)continue;
+    p.inv=Math.max(0,p.inv-1); p.cd=Math.max(0,p.cd-1);
+    if(p.frz>0){p.frz--;continue;}
+    p.isP?doInput(p):doBot(p);
 
-function damageTile(c, r, amount = 1) {
-  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
-  if (grid[r][c] <= 0) return;
-  grid[r][c] = Math.max(0, grid[r][c] - amount);
-  // Particles
-  const tx = c * TILE + TILE/2, ty = r * TILE + TILE/2;
-  for (let i = 0; i < 6; i++) {
-    particles.push({
-      x: tx + (Math.random()-0.5)*TILE,
-      y: ty + (Math.random()-0.5)*TILE,
-      vx: (Math.random()-0.5)*4,
-      vy: (Math.random()-0.5)*4 - 1,
-      life: 40 + Math.random()*20,
-      maxLife: 60,
-      size: 3 + Math.random()*4,
-      color: iceColor(grid[r][c]+1)
-    });
-  }
-}
+    const nr=p.gr+p.vr, nc=p.gc+p.vc;
+    if(solid(Math.floor(nr),Math.floor(p.gc)))p.gr=nr; else p.vr*=-.2;
+    if(solid(Math.floor(p.gr),Math.floor(nc)))p.gc=nc; else p.vc*=-.2;
+    p.gr=Math.max(.4,Math.min(GR-.4,p.gr)); p.gc=Math.max(.4,Math.min(GC-.4,p.gc));
+    p.vr*=.78; p.vc*=.78;
 
-function iceColor(phase) {
-  if (phase >= 4) return '#c8eeff';
-  if (phase === 3) return '#90c8e8';
-  if (phase === 2) return '#6090b8';
-  if (phase === 1) return '#405878';
-  return null;
-}
-
-function iceFillColor(phase) {
-  if (phase >= 4) return '#e8f8ff';
-  if (phase === 3) return '#b8ddf0';
-  if (phase === 2) return '#7aaac8';
-  if (phase === 1) return '#507090';
-  return null;
-}
-
-// ── PLAYER PHYSICS
-function updatePlayer(p, dt) {
-  if (!p.alive) return;
-  const ctrl = P_CONTROLS[p.idx];
-
-  p.invincible = Math.max(0, p.invincible - 1);
-  p.shootCooldown = Math.max(0, p.shootCooldown - 1);
-
-  const leftHeld  = keys[ctrl.left];
-  const rightHeld = keys[ctrl.right];
-  const upHeld    = keys[ctrl.up];
-  const shootHeld = keys[ctrl.shoot];
-
-  if (p.inWater) {
-    // ── SWIM MODE
-    p.waterTimer += dt;
-    p.vx *= 0.85;
-    p.vy *= 0.85;
-    if (leftHeld)  { p.vx -= 0.4; p.facing = -1; }
-    if (rightHeld) { p.vx += 0.4; p.facing =  1; }
-    if (upHeld)    { p.vy -= 0.5; }
-    else           { p.vy += 0.1; } // gentle sink
-
-    p.vx = Math.max(-SWIM_SPEED, Math.min(SWIM_SPEED, p.vx));
-    p.vy = Math.max(-SWIM_SPEED, Math.min(SWIM_SPEED, p.vy));
-
-    // Jump out of water
-    if (upHeld && p.y + p.h >= WATER_Y - 4 && p.vy < 0.5) {
-      p.vy = JUMP_FORCE * 1.1;
-      p.inWater = false;
-      p.waterTimer = 0;
-      splashEffect(p.x + p.w/2, WATER_Y);
-    }
-
-    // Water damage after 5s
-    if (p.waterTimer > WATER_DAMAGE_START) {
-      const dmg = WATER_DAMAGE_RATE * (dt / 1000);
-      hurtPlayer(p, dmg, null);
-    }
-    p.onGround = false;
-
-  } else {
-    // ── ICE MODE
-    p.coyoteTime = Math.max(0, p.coyoteTime - 1);
-    if (p.jumpBuffer > 0) p.jumpBuffer--;
-
-    // Horizontal
-    if (leftHeld)  { p.vx = Math.max(p.vx - 0.6, -MOVE_SPEED); p.facing = -1; }
-    if (rightHeld) { p.vx = Math.min(p.vx + 0.6,  MOVE_SPEED); p.facing =  1; }
-    if (!leftHeld && !rightHeld) p.vx *= 0.78;
-
-    // Jump
-    if (upHeld) p.jumpBuffer = 8;
-    if (p.jumpBuffer > 0 && (p.onGround || p.coyoteTime > 0)) {
-      p.vy = JUMP_FORCE;
-      p.onGround = false;
-      p.coyoteTime = 0;
-      p.jumpBuffer = 0;
-    }
-
-    // Gravity
-    p.vy += GRAVITY;
-    p.vy = Math.min(p.vy, 14);
+    if(!solid(Math.floor(p.gr),Math.floor(p.gc)))killP(p);
+    const tr=Math.floor(p.gr),tc=Math.floor(p.gc);
+    if(grid[tr]&&grid[tr][tc]===1&&Math.random()<.007)dmgTile(tr,tc,1);
   }
 
-  // ── SHOOT
-  if (shootHeld && p.shootCooldown === 0) {
-    p.shootCooldown = 22;
-    bullets.push({
-      x: p.x + p.w/2 + p.facing * p.w/2,
-      y: p.y + p.h/2,
-      vx: BULLET_SPEED * p.facing,
-      vy: p.inWater ? (Math.random()-0.5)*1.5 : 0,
-      owner: p.idx,
-      life: 70,
-      color: p.color
-    });
-  }
+  doBullets();
 
-  // ── MOVE & COLLIDE (only on ice)
-  if (!p.inWater) {
-    moveAndCollide(p);
-  } else {
-    p.x += p.vx;
-    p.y += p.vy;
-    // Keep in water area
-    p.x = Math.max(0, Math.min(W - p.w, p.x));
-    p.y = Math.max(WATER_Y, Math.min(H - p.h - 2, p.y));
-  }
+  for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.vx*=.95;p.life--;}
+  parts=parts.filter(p=>p.life>0);
+  for(let r=0;r<GR;r++)for(let c=0;c<GC;c++)if(gfx[r][c]>0)gfx[r][c]--;
 
-  // ── FALL INTO WATER
-  if (!p.inWater && p.y + p.h >= WATER_Y) {
-    p.inWater = true;
-    p.waterTimer = 0;
-    p.y = WATER_Y;
-    p.vy = Math.min(p.vy * 0.4, 2);
-    splashEffect(p.x + p.w/2, WATER_Y);
-  }
-
-  // ── WALL BOUNDS
-  p.x = Math.max(0, Math.min(W - p.w, p.x));
+  const alive=players.filter(p=>p.alive);
+  document.getElementById('alive-num').textContent=alive.length;
+  updHUD();
+  if(alive.length<=1){running=false;setTimeout(()=>showResult(alive[0]),700);}
+  draw();
+  fid=requestAnimationFrame(update);
 }
 
-function moveAndCollide(p) {
-  // Horizontal
-  p.x += p.vx;
-  p.x = Math.max(0, Math.min(W - p.w, p.x));
-
-  // Check horizontal tile collisions
-  const col1 = Math.floor(p.x / TILE);
-  const col2 = Math.floor((p.x + p.w - 1) / TILE);
-  const row1 = Math.floor(p.y / TILE);
-  const row2 = Math.floor((p.y + p.h - 1) / TILE);
-
-  for (let r = row1; r <= row2; r++) {
-    for (let c = col1; c <= col2; c++) {
-      if (getTile(c * TILE + TILE/2, r * TILE + TILE/2) > 0) {
-        if (grid[r] && grid[r][c] > 0) {
-          if (p.vx > 0) p.x = c * TILE - p.w;
-          else if (p.vx < 0) p.x = (c + 1) * TILE;
-          p.vx = 0;
-        }
-      }
-    }
-  }
-
-  const prevOnGround = p.onGround;
-  p.onGround = false;
-
-  // Vertical
-  p.y += p.vy;
-
-  const col1b = Math.floor(p.x / TILE);
-  const col2b = Math.floor((p.x + p.w - 1) / TILE);
-  const row1b = Math.floor(p.y / TILE);
-  const row2b = Math.floor((p.y + p.h - 1) / TILE);
-
-  for (let r = row1b; r <= row2b; r++) {
-    for (let c = col1b; c <= col2b; c++) {
-      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] > 0) {
-        if (p.vy > 0) {
-          p.y = r * TILE - p.h;
-          p.vy = 0;
-          p.onGround = true;
-          p.coyoteTime = 8;
-          // Damage tile under player (weight mechanic — very slow)
-          if (Math.random() < 0.003) damageTile(c, r, 1);
-        } else if (p.vy < 0) {
-          p.y = (r + 1) * TILE;
-          p.vy = 0;
-        }
-      }
-    }
-  }
-
-  if (prevOnGround && !p.onGround) p.coyoteTime = 8;
+function doInput(p) {
+  const s=p.spd*.06;
+  if(K['ArrowUp'])   {p.vr-=s;p.vc-=s;p.fac={r:-1,c:-1};}
+  if(K['ArrowDown']) {p.vr+=s;p.vc+=s;p.fac={r:1,c:1};}
+  if(K['ArrowLeft']) {p.vr+=s;p.vc-=s;p.fac={r:1,c:-1};}
+  if(K['ArrowRight']){p.vr-=s;p.vc+=s;p.fac={r:-1,c:1};}
+  if(K['Space']&&p.cd===0)shoot(p);
 }
 
-// ── BULLETS
-function updateBullets() {
-  bullets = bullets.filter(b => b.life > 0);
-  for (const b of bullets) {
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life--;
+function doBot(p) {
+  let near=null,nd=Infinity;
+  for(const o of players){if(!o.alive||o===p)continue;const dr=o.gr-p.gr,dc=o.gc-p.gc,d=Math.sqrt(dr*dr+dc*dc);if(d<nd){nd=d;near=o;}}
+  if(!near)return;
+  p.ait--;
+  if(p.ait<=0){
+    p.ait=18+Math.random()*25;
+    const dr=near.gr-p.gr,dc=near.gc-p.gc,ln=Math.sqrt(dr*dr+dc*dc)||1;
+    p.aid={r:dr/ln+(Math.random()-.5)*.7,c:dc/ln+(Math.random()-.5)*.7};
+  }
+  const s=p.spd*.055;
+  p.vr+=p.aid.r*s; p.vc+=p.aid.c*s;
+  p.vr=Math.max(-p.spd*.065,Math.min(p.spd*.065,p.vr));
+  p.vc=Math.max(-p.spd*.065,Math.min(p.spd*.065,p.vc));
+  const dr=near.gr-p.gr,dc=near.gc-p.gc,ln=Math.sqrt(dr*dr+dc*dc)||1;
+  p.fac={r:dr/ln,c:dc/ln};
+  if(nd<6.5&&p.cd===0)shoot(p);
+}
 
-    // Hit tiles
-    const c = Math.floor(b.x / TILE);
-    const r = Math.floor(b.y / TILE);
-    if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] > 0) {
-      damageTile(c, r, 1);
-      spawnBulletHit(b.x, b.y, b.color);
-      b.life = 0;
-      continue;
-    }
+function shoot(p) {
+  p.cd=p.fr;
+  const fr=p.fac.r||0,fc=p.fac.c||1,ln=Math.sqrt(fr*fr+fc*fc)||1;
+  bullets.push({gr:p.gr+fr*.7,gc:p.gc+fc*.7,vr:(fr/ln)*p.bspd*.065,vc:(fc/ln)*p.bspd*.065,own:p,dmg:p.dmg,col:p.col,life:52,frz:p.cls==='mage'});
+}
 
-    // Hit players
-    for (const p of players) {
-      if (!p.alive || p.idx === b.owner || p.invincible > 0) continue;
-      if (b.x > p.x && b.x < p.x + p.w && b.y > p.y && b.y < p.y + p.h) {
-        hurtPlayer(p, 18, b);
-        spawnBulletHit(b.x, b.y, b.color);
-        b.life = 0;
-        break;
-      }
+function doBullets() {
+  bullets=bullets.filter(b=>b.life>0);
+  for(const b of bullets){
+    b.gr+=b.vr; b.gc+=b.vc; b.life--;
+    const tr=Math.floor(b.gr),tc=Math.floor(b.gc);
+    if(tr>=0&&tr<GR&&tc>=0&&tc<GC&&grid[tr][tc]>0){dmgTile(tr,tc,1);const s=iso(b.gc,b.gr);hitParticles(s.x,s.y-8,b.col);b.life=0;continue;}
+    for(const p of players){
+      if(!p.alive||p===b.own||p.inv>0)continue;
+      const dr=p.gr-b.gr,dc=p.gc-b.gc;
+      if(Math.sqrt(dr*dr+dc*dc)<.55){hurtP(p,b.dmg);if(b.frz)p.frz=65;const s=iso(b.gc,b.gr);hitParticles(s.x,s.y-8,b.col);b.life=0;break;}
     }
   }
 }
 
-function hurtPlayer(p, dmg, b) {
-  if (p.invincible > 0) return;
-  p.hp = Math.max(0, p.hp - dmg);
-  p.invincible = 25;
-  if (b) { p.vx += b.vx * 0.25; p.vy -= 2; }
-  // Flash
-  for (let i = 0; i < 8; i++) {
-    particles.push({
-      x: p.x + Math.random()*p.w,
-      y: p.y + Math.random()*p.h,
-      vx: (Math.random()-0.5)*5,
-      vy: (Math.random()-0.5)*5 - 2,
-      life: 25, maxLife: 25,
-      size: 4 + Math.random()*4,
-      color: p.color
-    });
-  }
-  if (p.hp <= 0) killPlayer(p);
+function hurtP(p,dmg) {
+  if(p.inv>0)return; p.hp=Math.max(0,p.hp-dmg); p.inv=28;
+  const s=iso(p.gc,p.gr);
+  for(let i=0;i<8;i++)parts.push({x:s.x+(Math.random()-.5)*20,y:s.y+(Math.random()-.5)*12,vx:(Math.random()-.5)*5,vy:-Math.random()*4-1,life:20+Math.random()*15,ml:35,sz:4+Math.random()*4,col:p.col});
+  if(p.hp<=0)killP(p);
 }
-
-function killPlayer(p) {
-  p.alive = false;
-  p.hp = 0;
-  // Big death particles
-  for (let i = 0; i < 20; i++) {
-    particles.push({
-      x: p.x + p.w/2, y: p.y + p.h/2,
-      vx: (Math.random()-0.5)*10,
-      vy: Math.random()*-8 - 2,
-      life: 60 + Math.random()*30, maxLife: 90,
-      size: 6 + Math.random()*8,
-      color: p.color
-    });
-  }
-  setTimeout(checkRoundEnd, 500);
-}
-
-function checkRoundEnd() {
-  if (!roundActive) return;
-  const alive = players.filter(p => p.alive);
-  if (alive.length <= 1) {
-    roundActive = false;
-    if (alive.length === 1) {
-      scores[alive[0].idx]++;
-      updateScoreUI();
-    }
-    roundEndTimer = 120;
-  }
-}
-
-// ── EFFECTS
-function splashEffect(x, y) {
-  ripples.push({ x, y, r: 5, maxR: 40, life: 30, maxLife: 30 });
-  for (let i = 0; i < 12; i++) {
-    const angle = Math.random() * Math.PI;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * (2 + Math.random()*3),
-      vy: -Math.sin(angle) * (3 + Math.random()*4),
-      life: 25 + Math.random()*15, maxLife: 40,
-      size: 3 + Math.random()*5,
-      color: '#5ac8fa'
-    });
-  }
-}
-
-function spawnBulletHit(x, y, color) {
-  for (let i = 0; i < 5; i++) {
-    particles.push({
-      x, y,
-      vx: (Math.random()-0.5)*6,
-      vy: (Math.random()-0.5)*6,
-      life: 15 + Math.random()*10, maxLife: 25,
-      size: 2 + Math.random()*3,
-      color
-    });
-  }
+function killP(p) {
+  p.alive=false;
+  const s=iso(p.gc,p.gr);
+  for(let i=0;i<22;i++)parts.push({x:s.x+(Math.random()-.5)*30,y:s.y+(Math.random()-.5)*20,vx:(Math.random()-.5)*8,vy:-Math.random()*7-2,life:40+Math.random()*30,ml:70,sz:5+Math.random()*7,col:p.col});
 }
 
 // ── DRAW
-function drawBackground() {
-  // Deep water
-  const waterGrad = ctx.createLinearGradient(0, WATER_Y, 0, H);
-  waterGrad.addColorStop(0, '#0a2a50');
-  waterGrad.addColorStop(1, '#040e1e');
-  ctx.fillStyle = waterGrad;
-  ctx.fillRect(0, WATER_Y, W, H - WATER_Y);
-
-  // Water shimmer lines
-  ctx.save();
-  ctx.globalAlpha = 0.08;
-  const t = Date.now() * 0.001;
-  for (let i = 0; i < 8; i++) {
-    const y = WATER_Y + 20 + i * 16 + Math.sin(t + i * 0.7) * 4;
-    ctx.strokeStyle = '#5ac8fa';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(W, y);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Water surface line
-  ctx.strokeStyle = '#1a5a9a';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, WATER_Y);
-  ctx.lineTo(W, WATER_Y);
-  ctx.stroke();
-
-  // Sky gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, WATER_Y);
-  skyGrad.addColorStop(0, '#050d1a');
-  skyGrad.addColorStop(1, '#0a1a30');
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, W, WATER_Y);
+function draw() {
+  ctx.clearRect(0,0,SW,SH);
+  const bg=ctx.createRadialGradient(SW/2,SH/2,0,SW/2,SH/2,SW*.8);
+  bg.addColorStop(0,'#0a1e3a'); bg.addColorStop(1,'#050d1a');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,SW,SH);
 
   // Stars
-  ctx.save();
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = '#ffffff';
-  // Static stars (seed-based)
-  for (let i = 0; i < 40; i++) {
-    const sx = ((i * 137.5) % W);
-    const sy = ((i * 97.3) % (WATER_Y - 60));
-    const size = (i % 3 === 0) ? 1.5 : 1;
-    ctx.beginPath();
-    ctx.arc(sx, sy, size, 0, Math.PI*2);
-    ctx.fill();
-  }
+  ctx.save(); ctx.globalAlpha=.35; ctx.fillStyle='#fff';
+  for(let i=0;i<50;i++){ctx.beginPath();ctx.arc((i*137.5)%SW,(i*89.3)%(SH*.6),i%4===0?1.5:1,0,Math.PI*2);ctx.fill();}
   ctx.restore();
-}
 
-function drawGrid() {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const phase = grid[r][c];
-      if (phase <= 0) continue;
-      const x = c * TILE, y = r * TILE;
-      const fill = iceFillColor(phase);
-      const stroke = iceColor(phase);
+  // Tiles + entities back to front
+  const ord=[];
+  for(let r=0;r<GR;r++)for(let c=0;c<GC;c++)ord.push({r,c});
+  ord.sort((a,b)=>(a.r+a.c)-(b.r+b.c));
 
-      // Fill
-      ctx.fillStyle = fill;
-      ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
-
-      // Top shine
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fillRect(x + 2, y + 2, TILE - 4, 6);
-
-      // Border
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
-
-      // Cracks based on phase
-      if (phase <= 3) {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(20,60,100,0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        if (phase <= 3) {
-          ctx.moveTo(x+8,  y+12); ctx.lineTo(x+22, y+20);
-          ctx.moveTo(x+22, y+20); ctx.lineTo(x+16, y+32);
-        }
-        if (phase <= 2) {
-          ctx.moveTo(x+28, y+8);  ctx.lineTo(x+18, y+22);
-          ctx.moveTo(x+6,  y+28); ctx.lineTo(x+14, y+18);
-        }
-        if (phase <= 1) {
-          ctx.moveTo(x+4,  y+8);  ctx.lineTo(x+36, y+36);
-          ctx.moveTo(x+36, y+4);  ctx.lineTo(x+4,  y+36);
-        }
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
+  for(const {r,c} of ord){
+    drawTile(r,c);
+    // bullets at this depth
+    for(const b of bullets){if(Math.floor(b.gr)===r&&Math.floor(b.gc)===c){const s=iso(b.gc,b.gr);ctx.save();ctx.globalAlpha=b.life/52;ctx.fillStyle=b.col;ctx.shadowColor=b.col;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(s.x,s.y-10,5,0,Math.PI*2);ctx.fill();ctx.restore();}}
+    // players at this depth
+    for(const p of players){if(p.alive&&Math.floor(p.gr)===r&&Math.floor(p.gc)===c)drawP(p);}
   }
+
+  // Particles
+  for(const p of parts){ctx.save();ctx.globalAlpha=(p.life/p.ml)*.9;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.sz*(p.life/p.ml),0,Math.PI*2);ctx.fill();ctx.restore();}
 }
 
-function drawPlayer(p) {
-  if (!p.alive) return;
+function drawTile(r,c) {
+  const ph=grid[r][c];
+  const shk=gfx[r][c]>0?(Math.random()-.5)*2.5:0;
+  const {x:sx,y:sy0}=iso(c,r);
+  const sy=sy0+shk*.5; const x=sx+shk;
+  const hw=TW/2,hh=TH/2;
+
+  if(ph<=0){
+    const t=Date.now()*.001;
+    ctx.save();ctx.globalAlpha=.28+Math.sin(t+r*.5+c*.7)*.05;
+    ctx.fillStyle='#0a2a50';
+    ctx.beginPath();ctx.moveTo(x,sy-hh);ctx.lineTo(x+hw,sy);ctx.lineTo(x,sy+hh);ctx.lineTo(x-hw,sy);ctx.closePath();ctx.fill();
+    ctx.restore();return;
+  }
+  const col=icecol(ph);
+
+  // Top
+  ctx.beginPath();ctx.moveTo(x,sy-hh);ctx.lineTo(x+hw,sy);ctx.lineTo(x,sy+hh);ctx.lineTo(x-hw,sy);ctx.closePath();
+  ctx.fillStyle=col.t;ctx.fill();
+  ctx.save();ctx.clip();ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(x-hw,sy-hh,hw,hh*.7);ctx.restore();
+
+  // Left side
+  ctx.beginPath();ctx.moveTo(x-hw,sy);ctx.lineTo(x,sy+hh);ctx.lineTo(x,sy+hh+TD);ctx.lineTo(x-hw,sy+TD);ctx.closePath();
+  ctx.fillStyle=col.l;ctx.fill();
+
+  // Right side
+  ctx.beginPath();ctx.moveTo(x+hw,sy);ctx.lineTo(x,sy+hh);ctx.lineTo(x,sy+hh+TD);ctx.lineTo(x+hw,sy+TD);ctx.closePath();
+  ctx.fillStyle=col.r;ctx.fill();
+
+  // Outlines
+  ctx.strokeStyle='rgba(0,20,50,.3)';ctx.lineWidth=.6;
+  ctx.beginPath();ctx.moveTo(x,sy-hh);ctx.lineTo(x+hw,sy);ctx.lineTo(x,sy+hh);ctx.lineTo(x-hw,sy);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-hw,sy);ctx.lineTo(x-hw,sy+TD);ctx.lineTo(x,sy+hh+TD);ctx.lineTo(x,sy+hh);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+hw,sy);ctx.lineTo(x+hw,sy+TD);ctx.lineTo(x,sy+hh+TD);ctx.stroke();
+
+  // Cracks
+  if(ph<=3){ctx.save();ctx.strokeStyle='rgba(20,60,100,.4)';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(x-10,sy-3);ctx.lineTo(x+6,sy+5);ctx.moveTo(x+6,sy+5);ctx.lineTo(x+1,sy+13);if(ph<=2){ctx.moveTo(x+14,sy-8);ctx.lineTo(x-5,sy+6);ctx.moveTo(x-13,sy+3);ctx.lineTo(x+2,sy-5);}if(ph<=1){ctx.moveTo(x-hw+4,sy);ctx.lineTo(x+hw-4,sy);ctx.moveTo(x,sy-hh+2);ctx.lineTo(x,sy+hh-2);}ctx.stroke();ctx.restore();}
+}
+
+function drawP(p) {
+  const {x:sx,y:sy0}=iso(p.gc,p.gr);
+  const bob=Math.sin(Date.now()*.003+p.bob)*2.5;
+  const px=sx, py=sy0-10+bob;
 
   ctx.save();
+  if(p.inv>0&&Math.floor(p.inv/3)%2===0)ctx.globalAlpha=.3;
+  if(p.frz>0){ctx.shadowColor='#80d0ff';ctx.shadowBlur=14;}
 
-  // Invincibility flash
-  if (p.invincible > 0 && Math.floor(p.invincible / 3) % 2 === 0) {
-    ctx.globalAlpha = 0.4;
-  }
+  // Shadow
+  ctx.save();ctx.globalAlpha=(ctx.globalAlpha||1)*.3;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px,py+22,15,7,0,0,Math.PI*2);ctx.fill();ctx.restore();
 
-  const cx = p.x + p.w/2;
-  const cy = p.y + p.h/2;
+  // Body
+  ctx.fillStyle=p.frz>0?'#c8eeff':'#18182a';
+  ctx.beginPath();ctx.ellipse(px,py+6,13,15,0,0,Math.PI*2);ctx.fill();
 
-  if (p.inWater) {
-    // SWIM: only head above/at water line, wavy body below
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.ellipse(cx, p.y + 10, p.w*0.45, p.h*0.38, 0, 0, Math.PI*2);
-    ctx.fill();
+  // Belly
+  ctx.fillStyle=p.col;
+  ctx.beginPath();ctx.ellipse(px,py+8,7,10,0,0,Math.PI*2);ctx.fill();
 
-    // Eyes
-    ctx.fillStyle = '#050d1a';
-    ctx.beginPath(); ctx.arc(cx + p.facing*5, p.y + 8, 3, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(cx + p.facing*5 + 1, p.y + 7, 1, 0, Math.PI*2); ctx.fill();
+  // Head
+  ctx.fillStyle=p.frz>0?'#d8f0ff':'#18182a';
+  ctx.beginPath();ctx.arc(px,py-8,10,0,Math.PI*2);ctx.fill();
 
-    // Water splash around body
-    ctx.strokeStyle = p.swimColor;
-    ctx.lineWidth = 2;
-    const t = Date.now()*0.005;
-    ctx.beginPath();
-    ctx.arc(cx, WATER_Y, 14 + Math.sin(t)*3, Math.PI, 0);
-    ctx.stroke();
+  // Eyes
+  const ef=p.fac.c>0?4:p.fac.c<0?-4:0;
+  const ed=ef>0?1:ef<0?-1:0;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+ef,py-9,3.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#050d1a';ctx.beginPath();ctx.arc(px+ef+ed,py-9,2,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+ef+ed*1.5,py-10,.9,0,Math.PI*2);ctx.fill();
 
-    // Water timer bar above head
-    const timerPct = Math.min(1, p.waterTimer / WATER_DAMAGE_START);
-    if (timerPct > 0.1) {
-      ctx.fillStyle = timerPct > 0.8 ? '#ff4040' : '#f0c040';
-      ctx.fillRect(p.x, p.y - 10, p.w * timerPct, 4);
-      ctx.strokeStyle = '#0a1830';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(p.x, p.y - 10, p.w, 4);
-    }
+  // Beak
+  ctx.fillStyle='#f0a030';
+  const bd=ef||3;
+  ctx.beginPath();ctx.moveTo(px+bd*1.2,py-7);ctx.lineTo(px+bd*2.3,py-5);ctx.lineTo(px+bd*1.2,py-3);ctx.fill();
 
-  } else {
-    // LAND: full penguin body
-    // Body
-    ctx.fillStyle = '#1a1a2a';
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + 4, p.w*0.48, p.h*0.48, 0, 0, Math.PI*2);
-    ctx.fill();
+  // Feet
+  ctx.fillStyle='#f0a030';
+  ctx.beginPath();ctx.ellipse(px-5,py+19,5,2.5,-.2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(px+5,py+19,5,2.5,.2,0,Math.PI*2);ctx.fill();
 
-    // Belly
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + 6, p.w*0.28, p.h*0.32, 0, 0, Math.PI*2);
-    ctx.fill();
+  // HP bar
+  const hw=32,hpPct=p.hp/p.mhp;
+  ctx.fillStyle='#0a1828';ctx.fillRect(px-hw/2,py-28,hw,4);
+  ctx.fillStyle=hpPct>.5?'#3ad870':hpPct>.25?'#f0c040':'#f04040';
+  ctx.fillRect(px-hw/2,py-28,hw*hpPct,4);
+  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=.5;ctx.strokeRect(px-hw/2,py-28,hw,4);
 
-    // Head
-    ctx.fillStyle = '#1a1a2a';
-    ctx.beginPath();
-    ctx.arc(cx, p.y + 9, p.w*0.38, 0, Math.PI*2);
-    ctx.fill();
+  // YOU label
+  if(p.isP){ctx.fillStyle=p.col;ctx.font='700 10px Segoe UI';ctx.textAlign='center';ctx.fillText('YOU',px,py-32);}
 
-    // Eyes
-    const eyeX = cx + p.facing * 5;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(eyeX, p.y + 7, 4, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#050d1a';
-    ctx.beginPath(); ctx.arc(eyeX + p.facing, p.y + 7, 2.5, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(eyeX + p.facing + 1, p.y + 6, 1, 0, Math.PI*2); ctx.fill();
-
-    // Beak
-    ctx.fillStyle = '#f0a030';
-    ctx.beginPath();
-    ctx.moveTo(cx + p.facing*9, p.y + 10);
-    ctx.lineTo(cx + p.facing*14, p.y + 12);
-    ctx.lineTo(cx + p.facing*9, p.y + 14);
-    ctx.fill();
-
-    // Feet
-    ctx.fillStyle = '#f0a030';
-    ctx.beginPath(); ctx.ellipse(cx - 7, p.y + p.h - 2, 6, 3, -0.3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx + 7, p.y + p.h - 2, 6, 3,  0.3, 0, Math.PI*2); ctx.fill();
-
-    // Player indicator dot
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(cx, p.y - 6, 4, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  // Health bar above player
-  const hpPct = p.hp / p.maxHp;
-  ctx.fillStyle = '#0a1828';
-  ctx.fillRect(p.x, p.y - 18, p.w, 5);
-  ctx.fillStyle = hpPct > 0.5 ? '#3ad870' : hpPct > 0.25 ? '#f0c040' : '#f04040';
-  ctx.fillRect(p.x, p.y - 18, p.w * hpPct, 5);
-  ctx.strokeStyle = '#1a3a6a';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(p.x, p.y - 18, p.w, 5);
+  // Frozen overlay
+  if(p.frz>0){ctx.fillStyle='rgba(120,200,255,.25)';ctx.beginPath();ctx.ellipse(px,py+6,16,18,0,0,Math.PI*2);ctx.fill();}
 
   ctx.restore();
-}
-
-function drawBullets() {
-  for (const b of bullets) {
-    ctx.save();
-    ctx.globalAlpha = b.life / 70;
-    ctx.fillStyle = b.color;
-    ctx.shadowColor = b.color;
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-function drawParticles() {
-  for (const p of particles) {
-    ctx.save();
-    ctx.globalAlpha = (p.life / p.maxLife) * 0.9;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-function drawRipples() {
-  for (const r of ripples) {
-    ctx.save();
-    ctx.globalAlpha = (r.life / r.maxLife) * 0.5;
-    ctx.strokeStyle = '#5ac8fa';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(r.x, r.y, r.r, r.r * 0.3, 0, 0, Math.PI*2);
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-function drawWaterLabel() {
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = '#5ac8fa';
-  ctx.font = '700 11px Segoe UI';
-  ctx.textAlign = 'center';
-  ctx.fillText('🌊  WATER  —  ZWEMMODUS ACTIEF  🌊', W/2, WATER_Y + 16);
-  ctx.restore();
-}
-
-function drawPauseOverlay() {
-  ctx.save();
-  ctx.fillStyle = 'rgba(5,13,26,.8)';
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#cde8ff';
-  ctx.font = '900 36px Segoe UI';
-  ctx.textAlign = 'center';
-  ctx.fillText('⏸ PAUZE', W/2, H/2 - 10);
-  ctx.font = '400 14px Segoe UI';
-  ctx.fillStyle = '#5a8aaa';
-  ctx.fillText('Druk ESC om verder te spelen', W/2, H/2 + 24);
-  ctx.restore();
-}
-
-// ── UPDATE LOOP
-let lastTime = 0;
-let frameCount = 0;
-
-function update(timestamp) {
-  const dt = Math.min(timestamp - lastTime, 50);
-  lastTime = timestamp;
-
-  if (!roundActive || paused) {
-    if (roundEndTimer > 0) {
-      roundEndTimer--;
-      if (roundEndTimer <= 0) nextRound();
-    }
-    requestAnimationFrame(update);
-    return;
-  }
-
-  // Update players
-  for (const p of players) updatePlayer(p, dt);
-
-  // Update bullets
-  updateBullets();
-
-  // Update particles
-  particles = particles.filter(p => p.life > 0);
-  for (const p of particles) {
-    p.x += p.vx; p.y += p.vy;
-    p.vy += 0.12;
-    p.vx *= 0.97;
-    p.life--;
-  }
-
-  // Update ripples
-  ripples = ripples.filter(r => r.life > 0);
-  for (const r of ripples) {
-    r.r += (r.maxR - r.r) * 0.12;
-    r.life--;
-  }
-
-  // Update UI
-  updateHUD();
-
-  // Draw
-  draw();
-
-  requestAnimationFrame(update);
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  drawBackground();
-  drawGrid();
-  drawRipples();
-  drawBullets();
-  for (const p of players) drawPlayer(p);
-  drawParticles();
-  drawWaterLabel();
-  if (paused) drawPauseOverlay();
 }
 
 // ── HUD
-function updateHUD() {
-  for (let i = 0; i < 2; i++) {
-    const p = players[i];
-    document.getElementById(`p${i+1}-hp`).style.width = (p.hp / p.maxHp * 100) + '%';
-    let status = '';
-    if (!p.alive) status = '💀 KO';
-    else if (p.inWater) {
-      const remaining = Math.max(0, WATER_DAMAGE_START - p.waterTimer);
-      status = `🌊 WATER — ${(remaining/1000).toFixed(1)}s`;
-    }
-    document.getElementById(`p${i+1}-status`).textContent = status;
-  }
+function buildHUD(){
+  const L=document.getElementById('hud-left'),R=document.getElementById('hud-right');
+  L.innerHTML='';R.innerHTML='';
+  players.forEach((p,i)=>{
+    const d=document.createElement('div');d.className='player-card';d.id='pc'+i;
+    d.innerHTML=`<div class="pc-emoji">🐧</div><div class="pc-info"><div class="pc-name" style="color:${p.col}">${p.name}</div><div class="pc-bar"><div class="pc-fill" id="pf${i}" style="width:100%;background:${p.col}"></div></div></div>`;
+    (i<3?L:R).appendChild(d);
+  });
 }
+function updHUD(){players.forEach((p,i)=>{const f=document.getElementById('pf'+i),c=document.getElementById('pc'+i);if(f)f.style.width=(p.hp/p.mhp*100)+'%';if(c)c.classList.toggle('dead',!p.alive);});}
 
-function updateScoreUI() {
-  document.getElementById('p1-score').textContent = scores[0];
-  document.getElementById('p2-score').textContent = scores[1];
-  document.getElementById('round-num').textContent = round;
-}
-
-// ── ROUND / GAME FLOW
-function startRound() {
-  initGrid();
-  initPlayers();
-  bullets = [];
-  particles = [];
-  ripples = [];
-  roundActive = true;
-  roundEndTimer = 0;
-  updateScoreUI();
-}
-
-function nextRound() {
-  // Check win condition (best of 5 → 3 wins)
-  if (scores[0] >= 3 || scores[1] >= 3) {
-    showGameOver();
-    return;
-  }
-  round++;
-  startRound();
-}
-
-function showGameOver() {
-  const overlay = document.getElementById('overlay');
-  const wa = document.getElementById('winner-area');
-  overlay.style.display = 'flex';
-  let winnerHtml = '';
-  if (scores[0] > scores[1]) {
-    winnerHtml = `<div class="winner-text p1-win">🏆 Speler 1 wint het spel!</div>`;
-  } else if (scores[1] > scores[0]) {
-    winnerHtml = `<div class="winner-text p2-win">🏆 Speler 2 wint het spel!</div>`;
-  } else {
-    winnerHtml = `<div class="winner-text draw-win">🤝 Gelijkspel!</div>`;
-  }
-  wa.innerHTML = winnerHtml;
-  document.getElementById('start-btn').textContent = '▶ OPNIEUW SPELEN';
-  scores = [0, 0];
-  round = 1;
-}
-
-function togglePause() {
-  if (!roundActive) return;
-  paused = !paused;
+// ── RESULT
+function showResult(w){
+  const ov=document.getElementById('overlay'),rt=document.getElementById('result-text');
+  ov.style.display='flex';
+  if(!w)rt.innerHTML='<span class="lose">💀 Iedereen is dood — gelijkspel!</span>';
+  else if(w.isP)rt.innerHTML='<span class="win">🏆 JIJ WINT! Ongelofelijk!</span>';
+  else rt.innerHTML=`<span class="lose">💀 Verloren! ${w.name} heeft gewonnen.</span>`;
+  document.getElementById('play-btn').textContent='▶ OPNIEUW';
 }
 
 // ── START
-document.getElementById('start-btn').addEventListener('click', () => {
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('winner-area').innerHTML = '';
-  scores = [0, 0];
-  round = 1;
-  startRound();
-  requestAnimationFrame(t => { lastTime = t; requestAnimationFrame(update); });
+document.getElementById('play-btn').addEventListener('click',()=>{
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('result-text').innerHTML='';
+  initGrid();spawnAll();buildHUD();running=true;
+  if(fid)cancelAnimationFrame(fid);
+  lt=performance.now();fid=requestAnimationFrame(update);
 });
-
-// Initial draw
-drawBackground();
 </script>
 </body>
 </html>
