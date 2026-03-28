@@ -100,7 +100,7 @@ if(isMobile){
 }
 
 // ISO
-const TW=56,TH=28,TD=16,GR=48,GC=48;
+const TW=96,TH=48,TD=24,GR=48,GC=48;
 let camC=24,camR=24;
 const CAM_LERP=0.09;
 function iso(c,r){return{x:SW/2+(c-camC-r+camR)*(TW/2),y:SH/2-40+(c-camC+r-camR)*(TH/2)};}
@@ -127,9 +127,9 @@ function solid(r,c){return r>=0&&r<GR&&c>=0&&c<GC&&grid[r][c]>0;}
 function dmgTile(r,c,n=1){if(r<0||r>=GR||c<0||c>=GC||grid[r][c]<=0)return;grid[r][c]=Math.max(0,grid[r][c]-n);gfx[r][c]=8;iceParts(r,c);}
 
 // COLORS
-const TOPS=['#dff2ff','#aacee8','#6e9cba','#466480'];
-const LEFTS=['#92bcd6','#6898b2','#466e8e','#2c4460'];
-const RIGHTS=['#7aacc6','#5882a0','#3c5e7e','#243850'];
+const TOPS=['#f0faff','#d0ecf8','#a8d4ec','#7ab0d0'];
+const LEFTS=['#c8e4f4','#a0c8e0','#78a8c8','#5080a0'];
+const RIGHTS=['#b8d8ee','#90bcd8','#6898bc','#487090'];
 function icecol(p){const i=Math.max(0,p-1);return{t:TOPS[i],l:LEFTS[i],r:RIGHTS[i]};}
 
 // PARTICLES
@@ -345,7 +345,7 @@ function drawTile(r,c){
 function drawP(p){
   const{x:sx,y:sy0}=iso(p.gc,p.gr);
   const bob=Math.sin(Date.now()*.003+p.bob)*2;
-  const px=sx,py=sy0-10+bob;
+  const px=sx,py=sy0-TD-28+bob;
   ctx.save();
   if(p.inv>0&&Math.floor(p.inv/3)%2===0)ctx.globalAlpha=.25;
   if(p.frz>0){ctx.shadowColor='#80d0ff';ctx.shadowBlur=14;}
@@ -423,6 +423,7 @@ document.getElementById('play-btn').addEventListener('click',()=>{
   document.getElementById('bot-cards').innerHTML='';
   initGrid();spawnAll();
   camC=players[0].gc;camR=players[0].gr;
+  renderAmmo(players[0]);
   running=true;
   if(fid)cancelAnimationFrame(fid);
   lt=performance.now();fid=requestAnimationFrame(update);
