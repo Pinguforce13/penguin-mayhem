@@ -1,0 +1,249 @@
+/* ── RESET & BASE ── */
+* {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #050d1a;
+  touch-action: none;
+}
+#canvas {
+  display: block;
+  position: fixed;
+  top: 0; left: 0;
+}
+
+/* ── HUD WRAPPER ── */
+#hud {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── MY HP (top left) ── */
+#my-hp-wrap {
+  position: absolute;
+  top: 14px; left: 14px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#my-hp-name {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px; font-weight: 800;
+  color: #5ac8fa; letter-spacing: 1px;
+}
+#my-hp-bar-bg {
+  width: 160px; height: 12px;
+  background: rgba(10,24,40,.85);
+  border-radius: 6px;
+  border: 1px solid #1a3a6a;
+  overflow: hidden;
+}
+#my-hp-bar {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #3ad870, #5ac8fa);
+  border-radius: 6px;
+  transition: width .12s, background .3s;
+}
+#my-hp-text {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 10px; color: #5a84a8;
+}
+
+/* ── ALIVE COUNTER (top center) ── */
+#alive-wrap {
+  position: absolute;
+  top: 14px; left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(5,13,26,.8);
+  border: 1px solid #1a3a6a;
+  border-radius: 12px;
+  padding: 6px 18px;
+  backdrop-filter: blur(8px);
+}
+#alive-num {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 22px; font-weight: 900;
+  color: #cde8ff; line-height: 1;
+}
+#alive-lbl {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 9px; color: #3a6a9a;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* ── MINIMAP (top right) ── */
+#minimap-wrap {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(5,13,26,.85);
+  border: 1px solid #1a3a6a;
+  border-radius: 10px;
+  padding: 4px;
+}
+#minimap { display: block; border-radius: 7px; }
+
+/* ── AMMO (bottom left) ── */
+#ammo-wrap {
+  position: absolute;
+  bottom: 24px; left: 14px;
+}
+#ammo-lbl {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 10px; font-weight: 800;
+  color: #3a6a9a; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 5px;
+}
+#ammo-dots {
+  display: flex; gap: 5px;
+  flex-wrap: wrap; max-width: 130px;
+}
+.ammo-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #5ac8fa;
+  box-shadow: 0 0 6px rgba(90,200,250,.6);
+  transition: all .1s;
+}
+.ammo-dot.empty {
+  background: #1a3050;
+  box-shadow: none;
+}
+
+/* ── BOT CARDS (right side) ── */
+#bot-cards {
+  position: absolute;
+  top: 70px; right: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.bot-card {
+  background: rgba(5,13,26,.78);
+  border: 1px solid #1a3a6a;
+  border-radius: 10px;
+  padding: 6px 10px;
+  display: flex; align-items: center; gap: 6px;
+  backdrop-filter: blur(6px);
+  transition: opacity .3s;
+}
+.bot-card.dead { opacity: .25; }
+.bot-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.bot-info { display: flex; flex-direction: column; gap: 2px; }
+.bot-name {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 9px; font-weight: 800; color: #cde8ff;
+}
+.bot-bar-bg {
+  width: 60px; height: 4px;
+  background: #0a1828; border-radius: 2px; overflow: hidden;
+}
+.bot-bar-fill { height: 100%; border-radius: 2px; transition: width .1s; }
+
+/* ── JOYSTICK (mobile) ── */
+#joystick-area {
+  position: fixed;
+  bottom: 24px; left: 24px;
+  width: 120px; height: 120px;
+  z-index: 10; display: none;
+}
+#joystick-base {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: rgba(10,30,60,.55);
+  border: 2px solid rgba(90,200,250,.28);
+}
+#joystick-knob {
+  position: absolute;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(90,200,250,.45);
+  border: 2px solid rgba(90,200,250,.75);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ── SHOOT BUTTON (mobile) ── */
+#shoot-btn {
+  position: fixed;
+  bottom: 36px; right: 36px;
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  background: rgba(255,80,50,.22);
+  border: 2px solid rgba(255,110,70,.55);
+  display: none;
+  align-items: center; justify-content: center;
+  font-size: 26px;
+  z-index: 10;
+  touch-action: none; user-select: none;
+}
+#shoot-btn:active { background: rgba(255,80,50,.5); }
+
+/* ── OVERLAY / MENU ── */
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,13,26,.94);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 20; gap: 12px; padding: 20px;
+}
+#overlay-penguin {
+  font-size: 60px;
+  animation: bob 2s ease-in-out infinite;
+}
+#overlay h1 {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: clamp(26px, 5vw, 50px);
+  font-weight: 900; color: #cde8ff;
+  letter-spacing: 2px; text-align: center; line-height: 1.1;
+}
+#overlay-sub {
+  font-size: clamp(15px, 3vw, 24px);
+  color: #5ac8fa;
+}
+.sub {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px; color: #5a8aaa; text-align: center;
+}
+.info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; max-width: 440px; width: 100%;
+}
+.info-box {
+  background: #0d2040;
+  border: 1px solid #1a3a6a;
+  border-radius: 12px; padding: 12px 14px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 12px; color: #8ab4d4; line-height: 1.75;
+}
+.info-box h3 {
+  font-size: 11px; font-weight: 800;
+  color: #cde8ff; margin-bottom: 5px; letter-spacing: 1px;
+}
+#play-btn {
+  background: linear-gradient(135deg, #3a9fd8, #5ac8fa);
+  color: #050d1a; border: none; border-radius: 14px;
+  padding: 14px 52px; font-size: 18px; font-weight: 900;
+  cursor: pointer; font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 1px; transition: transform .1s;
+}
+#play-btn:hover { transform: scale(1.04); }
+#play-btn:active { transform: scale(.97); }
+#result-text {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 24px; font-weight: 900;
+  text-align: center; min-height: 36px;
+}
+.win  { color: #5ac8fa; }
+.lose { color: #ff7a5a; }
+#kb-hint {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px; color: #1a3a5a; text-align: center;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%       { transform: translateY(-12px) rotate(4deg); }
+}
