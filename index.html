@@ -47,12 +47,52 @@
   <div id="overlay-penguin">🐧</div>
   <h1>PENGUIN MAYHEM<br><span id="overlay-sub">ICEBREAKERS</span></h1>
   <p class="sub">Showdown — Last Penguin Standing</p>
-  <div class="info-grid">
-    <div class="info-box"><h3>🏄 JOU — SURFER</h3>WASD / pijltjes = bewegen<br>Spatie = schieten<br>📱 Joystick + knop op gsm</div>
-    <div class="info-box"><h3>🤖 4 BOTS</h3>🪖 Soldier — veel damage<br>🧊 Ice Mage — bevriest jou<br>🛡️ Tank — bijna onsterfelijk</div>
-    <div class="info-box"><h3>🧊 IJS MECHANIC</h3>Kogels breken ijs in 4 fases<br>Fase 0 = water = dood!<br>Kijk naar vijandelijke ammo!</div>
-    <div class="info-box"><h3>🗺️ GROTE MAP</h3>Camera volgt jou mee<br>Je ziet maar een kwart<br>Flank, exploreer, overleef!</div>
+
+  <!-- CHARACTER SELECT -->
+  <div id="char-select-label">Kies jouw class</div>
+  <div id="char-select">
+    <div class="char-card selected" data-cls="surfer">
+      <div class="char-emoji">🏄</div>
+      <div class="char-name" style="color:#5ac8fa">Surfer</div>
+      <div class="char-stats">
+        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:55%;background:#5ac8fa"></div></div></div>
+        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:90%;background:#5ac8fa"></div></div></div>
+        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:50%;background:#5ac8fa"></div></div></div>
+      </div>
+      <div class="char-desc">Super snel, mid damage, 6 kogels</div>
+    </div>
+    <div class="char-card" data-cls="soldier">
+      <div class="char-emoji">🪖</div>
+      <div class="char-name" style="color:#ff9a5a">Soldier</div>
+      <div class="char-stats">
+        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
+        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
+        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:75%;background:#ff9a5a"></div></div></div>
+      </div>
+      <div class="char-desc">Vuur 2 kogels per keer, 8 ammo</div>
+    </div>
+    <div class="char-card" data-cls="mage">
+      <div class="char-emoji">🧊</div>
+      <div class="char-name" style="color:#a080f8">Ice Mage</div>
+      <div class="char-stats">
+        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:40%;background:#a080f8"></div></div></div>
+        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:50%;background:#a080f8"></div></div></div>
+        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:95%;background:#a080f8"></div></div></div>
+      </div>
+      <div class="char-desc">Bevriest vijanden, hoog damage</div>
+    </div>
+    <div class="char-card" data-cls="tank">
+      <div class="char-emoji">🛡️</div>
+      <div class="char-name" style="color:#f0c040">Tank</div>
+      <div class="char-stats">
+        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:99%;background:#f0c040"></div></div></div>
+        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:30%;background:#f0c040"></div></div></div>
+        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:70%;background:#f0c040"></div></div></div>
+      </div>
+      <div class="char-desc">Veel HP, traag, zware kogels</div>
+    </div>
   </div>
+
   <div id="result-text"></div>
   <button id="play-btn">▶ SPEEL</button>
   <div id="kb-hint">WASD / ↑↓←→ bewegen &nbsp;|&nbsp; SPATIE schieten</div>
