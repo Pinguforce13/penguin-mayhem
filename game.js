@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════
 //  PENGUIN MAYHEM — game.js
-//  Top-down view, big map, walls, visible bullets
+//  Top-down view, big map, walls, visible bullets, character select
 // ══════════════════════════════════════════
 
 const canvas = document.getElementById('canvas');
@@ -27,7 +27,63 @@ if (isMobile) {
 }
 
 // ══════════════════════════════════════════
-//  TOP-DOWN CAMERA
+//  CHARACTER SELECT
+// ══════════════════════════════════════════
+let selectedClass = 'surfer';
+
+document.querySelectorAll('.char-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.cls;
+  });
+});
+
+// ── CHARACTER SELECT
+let selectedClass = 'surfer';
+
+document.querySelectorAll('.char-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.cls;
+  });
+});
+
+// ── CHARACTER SELECT
+let selectedClass = 'surfer';
+document.querySelectorAll('.char-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.cls;
+  });
+});
+
+// ── CHARACTER SELECT
+let selectedClass = 'surfer';
+document.querySelectorAll('.char-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.cls;
+  });
+});
+
+// ── CHARACTER SELECTION
+let selectedClass = 'surfer';
+
+document.querySelectorAll('.char-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedClass = card.dataset.cls;
+    // Update HUD name preview
+    const icons = { surfer:'🏄', soldier:'🪖', mage:'🧊', tank:'🛡️' };
+    const names = { surfer:'Surfer', soldier:'Soldier', mage:'Ice Mage', tank:'Tank' };
+    document.getElementById('my-hp-name').textContent = icons[selectedClass] + ' ' + names[selectedClass] + ' — JIJ';
+  });
+});
 //  Each tile = TILE px on screen
 //  Camera tracks player smoothly
 // ══════════════════════════════════════════
@@ -211,12 +267,17 @@ function spawnAll() {
     { wx: 29.5*TILE,wy: 29.5*TILE },
   ];
 
+  const allCls = ['surfer', 'soldier', 'mage', 'tank'];
+  const botClasses = allCls.filter(c => c !== selectedClass);
+  // Fill bots: repeat if needed
+  while (botClasses.length < 4) botClasses.push(botClasses[Math.floor(Math.random()*botClasses.length)]);
+
   const configs = [
-    { cls:'surfer',  isP:true  },
-    { cls:'soldier', isP:false },
-    { cls:'mage',    isP:false },
-    { cls:'tank',    isP:false },
-    { cls:'soldier', isP:false },
+    { cls: selectedClass, isP: true  },
+    { cls: botClasses[0], isP: false },
+    { cls: botClasses[1], isP: false },
+    { cls: botClasses[2], isP: false },
+    { cls: botClasses[3], isP: false },
   ];
 
   configs.forEach((cfg, i) => {
@@ -718,6 +779,13 @@ function renderAmmo(p) {
 function updateHUD() {
   const me = players[0]; if (!me) return;
   const hpP = me.hp / me.mhp;
+
+  // Update name dynamically based on chosen class
+  const icons = { surfer:'🏄', soldier:'🪖', mage:'🧊', tank:'🛡️' };
+  document.getElementById('my-hp-name').textContent =
+    (icons[me.cls] || '🐧') + ' ' + me.name.toUpperCase() + ' — JIJ';
+  document.getElementById('my-hp-name').style.color = me.col;
+
   document.getElementById('my-hp-bar').style.width      = (hpP * 100) + '%';
   document.getElementById('my-hp-bar').style.background =
     hpP > .5  ? 'linear-gradient(90deg,#3ad870,#5ac8fa)' :
