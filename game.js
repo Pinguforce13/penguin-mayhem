@@ -39,16 +39,41 @@ document.querySelectorAll('.char-card').forEach(card => {
   });
 });
 
-// ── CHARACTER SELECT
-let selectedClass = 'surfer';
+// ══════════════════════════════════════════
+//  STORM STATE
+//  Zone shrinks from outside in over time
+// ══════════════════════════════════════════
+let stormRadius  = 0;   // current safe radius (in tiles from center)
+let stormTimer   = 0;   // frames since game start
+const STORM_START   = 60 * 20;  // start after 20s
+const STORM_SPEED   = 0.008;    // tiles per frame shrink speed
+const STORM_DAMAGE  = 0.05;     // hp per frame outside zone
+const STORM_MIN_R   = 6;        // smallest safe radius
 
-document.querySelectorAll('.char-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    selectedClass = card.dataset.cls;
-  });
-});
+function initStorm() {
+  stormRadius = GC / 2;  // start at full map size
+  stormTimer  = 0;
+}
+
+function updateStorm() {
+  stormTimer++;
+  if (stormTimer > STORM_START) {
+    stormRadius = Math.max(STORM_MIN_R, stormRadius - STORM_SPEED);
+  }
+
+  // Damage players outside the zone
+  const cx = GC / 2 * TILE;
+  const cy = GR / 2 * TILE;
+  for (const p of players) {
+    if (!p.alive) continue;
+    const dx = p.wx - cx, dy = p.wy - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy) / TILE; // in tiles
+    if (dist > stormRadius) {
+      p.hp = Math.max(0, p.hp - STORM_DAMAGE);
+      if (p.hp <= 0) killPlayer(p);
+    }
+  }
+}
 
 // ── CHARACTER SELECT
 let selectedClass = 'surfer';
@@ -405,6 +430,7 @@ function update(ts) {
   }
 
   updateBullets();
+  updateStorm();
 
   for (const p of parts) {
     p.wx += p.vx; p.wy += p.vy;
@@ -621,6 +647,9 @@ function draw() {
     ctx.restore();
   }
 
+  // Storm zone overlay
+  drawStorm();
+
   // Bullets — draw trail + bullet
   for (const b of bullets) {
     // Trail
@@ -731,6 +760,46 @@ function drawPlayer(p) {
 }
 
 // ══════════════════════════════════════════
+//  DRAW STORM
+// ══════════════════════════════════════════
+function drawStorm() {
+  if (stormTimer < STORM_START - 60 * 5) return; // don't show until 5s before start
+
+  const cx = GC / 2 * TILE;
+  const cy = GR / 2 * TILE;
+  const { x: scx, y: scy } = toScreen(cx, cy);
+  const safeR = stormRadius * TILE;
+
+  // Dark overlay outside safe zone using composite trick
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 30, 80, 0.45)';
+  ctx.beginPath();
+  // Full screen rect, then cut out safe circle
+  ctx.rect(0, 0, SW, SH);
+  ctx.arc(scx, scy, safeR, 0, Math.PI * 2, true); // clockwise = cutout
+  ctx.fill();
+
+  // Pulsing warning ring
+  const pulse = 0.5 + Math.sin(Date.now() * 0.004) * 0.5;
+  ctx.strokeStyle = `rgba(80, 180, 255, ${0.4 + pulse * 0.4})`;
+  ctx.lineWidth   = 3 + pulse * 3;
+  ctx.beginPath();
+  ctx.arc(scx, scy, safeR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Warning text if storm not started yet
+  if (stormTimer < STORM_START) {
+    const sec = Math.ceil((STORM_START - stormTimer) / 60);
+    ctx.fillStyle = 'rgba(80,180,255,0.9)';
+    ctx.font = '700 14px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⚠️ Storm begint over ${sec}s`, SW / 2, 60);
+  }
+
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════
 //  MINIMAP
 // ══════════════════════════════════════════
 function drawMinimap() {
@@ -753,6 +822,16 @@ function drawMinimap() {
     mmx.arc(p.wx / TILE * sc, p.wy / TILE * sc, p.isP ? 3 : 2, 0, Math.PI*2);
     mmx.fill();
   }
+
+  // Storm zone on minimap
+  const mscx = GC / 2 * sc;
+  const mscy = GR / 2 * sc;
+  const msafeR = stormRadius * sc;
+  mmx.strokeStyle = 'rgba(80,180,255,0.7)';
+  mmx.lineWidth = 1.5;
+  mmx.beginPath();
+  mmx.arc(mscx, mscy, msafeR, 0, Math.PI * 2);
+  mmx.stroke();
 
   // View rect
   const vx = (camX / TILE) * sc;
@@ -845,6 +924,7 @@ document.getElementById('play-btn').addEventListener('click', () => {
 
   initGrid();
   spawnAll();
+  initStorm();
 
   // Snap camera
   const me = players[0];
