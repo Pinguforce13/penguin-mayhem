@@ -13,7 +13,7 @@
 <body>
 <canvas id="canvas"></canvas>
 
-<!-- AUTH SCREEN -->
+<!-- AUTH -->
 <div id="auth-screen">
   <div id="auth-box">
     <div id="auth-penguin">🐧</div>
@@ -42,10 +42,13 @@
 
 <!-- MOBILE -->
 <div id="joystick-area"><div id="joystick-base"></div><div id="joystick-knob"></div></div>
-<div id="shoot-btn">💥</div>
+<div id="shoot-btn">🔫</div>
 
 <!-- PROFILE BUTTON -->
-<button id="profile-btn">👤</button>
+<button id="profile-btn">
+  <span>👤</span>
+  <span id="profile-btn-label"></span>
+</button>
 
 <!-- PROFILE PANEL -->
 <div id="profile-panel">
@@ -62,7 +65,7 @@
   <button id="auth-logout">🚪 Uitloggen</button>
 </div>
 
-<!-- MAIN MENU OVERLAY -->
+<!-- MENU -->
 <div id="overlay">
   <div id="overlay-penguin">🐧</div>
   <h1>PENGUIN MAYHEM<br><span id="overlay-sub">ICEBREAKERS</span></h1>
@@ -77,7 +80,7 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:90%;background:#5ac8fa"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:50%;background:#5ac8fa"></div></div></div>
       </div>
-      <div class="char-desc">Super snel, mid damage, 6 kogels</div>
+      <div class="char-desc">Super snel • 6 ammo • 2s reload</div>
     </div>
     <div class="char-card" data-cls="soldier">
       <div class="char-emoji">🪖</div>
@@ -87,7 +90,7 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:75%;background:#ff9a5a"></div></div></div>
       </div>
-      <div class="char-desc">2 kogels per keer, 8 ammo</div>
+      <div class="char-desc">Dubbel schot • 8 ammo • 1.5s reload</div>
     </div>
     <div class="char-card" data-cls="mage">
       <div class="char-emoji">🧊</div>
@@ -97,7 +100,7 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:50%;background:#a080f8"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:95%;background:#a080f8"></div></div></div>
       </div>
-      <div class="char-desc">Bevriest vijanden, hoog damage</div>
+      <div class="char-desc">Bevriest • 4 ammo • 2.5s reload</div>
     </div>
     <div class="char-card" data-cls="tank">
       <div class="char-emoji">🛡️</div>
@@ -107,12 +110,12 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:30%;background:#f0c040"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:70%;background:#f0c040"></div></div></div>
       </div>
-      <div class="char-desc">Veel HP, traag, zware kogels</div>
+      <div class="char-desc">Veel HP • 3 ammo • 3s reload</div>
     </div>
   </div>
   <div id="result-text"></div>
   <button id="play-btn">▶ SPEEL</button>
-  <div id="kb-hint">WASD / ↑↓←→ bewegen &nbsp;|&nbsp; SPATIE schieten</div>
+  <div id="kb-hint">WASD / pijltjes bewegen &nbsp;|&nbsp; SPATIE schieten &nbsp;|&nbsp; 📱 sleep 🔫 om te mikken</div>
 </div>
 
 <script src="game.js"></script>
