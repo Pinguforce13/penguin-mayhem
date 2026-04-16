@@ -16,7 +16,7 @@ const isMobile = ('ontouchstart' in window)||navigator.maxTouchPoints>0;
 if (isMobile) {
   document.getElementById('joystick-area').style.display='block';
   document.getElementById('shoot-btn').style.display='flex';
-  document.getElementById('ammo-wrap').style.bottom='165px';
+  document.getElementById('ammo-wrap').style.bottom='220px';
   document.getElementById('kb-hint').style.display='none';
   if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
 }
@@ -211,6 +211,225 @@ let parts=[];
 function spawnHitFx(wx,wy,col,n=5){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;parts.push({wx,wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:10+Math.random()*8,ml:18,sz:2+Math.random()*3,col});}}
 function spawnDeathFx(wx,wy,col){for(let i=0;i<20;i++)parts.push({wx:wx+(Math.random()-.5)*20,wy:wy+(Math.random()-.5)*20,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:22+Math.random()*18,ml:40,sz:3+Math.random()*6,col});}
 
+// ══════════════════════════════════════════ FISHING HOLES
+// Each hole: { r, c, wx, wy } — light blue water puddles on the map
+let fishingHoles = [];
+
+function initFishingHoles(){
+  fishingHoles = [];
+  // Place ~8 random fishing holes on floor tiles away from spawns
+  const candidates = [];
+  for(let r=5;r<GR-5;r++) for(let c=5;c<GC-5;c++){
+    if(grid[r][c]===T_FLOOR&&iceHP[r][c]>0){
+      // Not too close to spawns
+      const dists = [{r:4,c:4},{r:4,c:45},{r:45,c:4},{r:45,c:45},{r:24,c:24}]
+        .map(s=>Math.abs(s.r-r)+Math.abs(s.c-c));
+      if(Math.min(...dists)>6) candidates.push({r,c});
+    }
+  }
+  // Pick 8 spread out holes
+  for(let i=0;i<8;i++){
+    if(!candidates.length)break;
+    const idx=Math.floor(Math.random()*candidates.length);
+    const{r,c}=candidates.splice(idx,1)[0];
+    // Remove nearby candidates to spread them out
+    candidates.splice(0,candidates.length,...candidates.filter(x=>Math.abs(x.r-r)+Math.abs(x.c-c)>6));
+    fishingHoles.push({r,c,wx:(c+.5)*TILE,wy:(r+.5)*TILE});
+    // Clear the tile so it looks like a puddle
+    grid[r][c]=T_FLOOR; // keep as floor but mark as hole
+  }
+}
+
+// ══════════════════════════════════════════ CRATES
+// Each crate: { wx, wy, hp:50, alive, dropped:false }
+let crates = [];
+
+function initCrates(){
+  crates = [];
+  for(const hole of fishingHoles){
+    // 2 crates next to each fishing hole
+    const offsets = [{dx:-TILE,dy:0},{dx:TILE,dy:0},{dx:0,dy:-TILE},{dx:0,dy:TILE}];
+    let placed=0;
+    for(const{dx,dy} of offsets){
+      if(placed>=2)break;
+      const cr=Math.floor((hole.wy+dy)/TILE), cc=Math.floor((hole.wx+dx)/TILE);
+      if(cr>0&&cr<GR-1&&cc>0&&cc<GC-1&&grid[cr][cc]!==T_WALL){
+        crates.push({wx:hole.wx+dx,wy:hole.wy+dy,hp:50,mhp:50,alive:true,dropped:false,holeRef:hole});
+        placed++;
+      }
+    }
+  }
+}
+
+function updateCrates(){
+  for(const crate of crates){
+    if(!crate.alive)continue;
+    // Check bullet hits
+    for(const b of bullets){
+      const dx=crate.wx-b.wx,dy=crate.wy-b.wy;
+      if(Math.sqrt(dx*dx+dy*dy)<TILE*.4){
+        crate.hp-=b.dmg;
+        spawnHitFx(b.wx,b.wy,'#c8a060',5);
+        b.life=0;
+        if(crate.hp<=0&&!crate.dropped){
+          crate.alive=false;
+          crate.dropped=true;
+          // Drop fishing rod on the ground
+          drops.push({type:'rod',wx:crate.wx,wy:crate.wy,life:900}); // 15s on ground
+          spawnHitFx(crate.wx,crate.wy,'#c8a060',12);
+        }
+      }
+    }
+  }
+}
+
+// ══════════════════════════════════════════ DROPS (items on ground)
+let drops = [];
+
+function updateDrops(){
+  drops=drops.filter(d=>d.life>0);
+  for(const d of drops) d.life--;
+
+  // Player picks up drops
+  const me=players[0];
+  if(!me||!me.alive)return;
+  for(let i=drops.length-1;i>=0;i--){
+    const d=drops[i];
+    const dx=me.wx-d.wx,dy=me.wy-d.wy;
+    if(Math.sqrt(dx*dx+dy*dy)<PLAYER_R+16){
+      if(d.type==='rod'&&!inventory.rod){
+        inventory.rod={hp:20,maxHp:20};
+        drops.splice(i,1);
+        showPickupMsg('🎣 Vishengel opgepakt!');
+        renderInventory();
+      } else if(d.type==='fish'){
+        inventory.fish=(inventory.fish||0)+1;
+        drops.splice(i,1);
+        showPickupMsg('🐟 Visje opgepakt! Klik om te eten (+10 HP)');
+        renderInventory();
+      }
+    }
+  }
+}
+
+// ══════════════════════════════════════════ INVENTORY
+let inventory = { rod:null, fish:0 };
+let fishingState = { active:false, castX:0, castY:0, timer:0, hooked:false };
+let eatTimer = 0;
+
+function initInventory(){
+  inventory={rod:null,fish:0};
+  fishingState={active:false,castX:0,castY:0,timer:0,hooked:false};
+  eatTimer=0;
+}
+
+function showPickupMsg(msg){
+  const el=document.getElementById('pickup-msg');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.opacity='1';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.opacity='0',2500);
+}
+
+function renderInventory(){
+  const el=document.getElementById('inventory-bar');
+  if(!el)return;
+  let html='';
+  if(inventory.rod){
+    const pct=Math.round(inventory.rod.hp/inventory.rod.maxHp*100);
+    html+=`<div class="inv-slot ${fishingState.active?'active':''}" id="inv-rod" onclick="useRod()">
+      <div class="inv-icon">🎣</div>
+      <div class="inv-label">${inventory.rod.hp}/${inventory.rod.maxHp}</div>
+    </div>`;
+  }
+  if(inventory.fish>0){
+    html+=`<div class="inv-slot" id="inv-fish" onclick="eatFish()">
+      <div class="inv-icon">🐟</div>
+      <div class="inv-label">${inventory.fish}x ${eatTimer>0?'eten...':''}</div>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+function useRod(){
+  if(!inventory.rod||fishingState.active)return;
+  const me=players[0];
+  if(!me||!me.alive)return;
+  // Cast in facing direction — find nearest fishing hole
+  let nearHole=null,nearDist=Infinity;
+  for(const h of fishingHoles){
+    const dx=h.wx-me.wx,dy=h.wy-me.wy;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<nearDist){nearDist=d;nearHole=h;}
+  }
+  if(!nearHole||nearDist>TILE*4){
+    showPickupMsg('🎣 Te ver van een visputje!');return;
+  }
+  fishingState={active:true,castX:nearHole.wx,castY:nearHole.wy,timer:180,hooked:false,holeRef:nearHole};
+  showPickupMsg('🎣 Hengel uitgegooid! Wacht...');
+  renderInventory();
+}
+
+function eatFish(){
+  if(inventory.fish<=0||eatTimer>0)return;
+  eatTimer=120; // 2s eating
+}
+
+function updateFishing(){
+  if(eatTimer>0){
+    eatTimer--;
+    if(eatTimer===0){
+      inventory.fish--;
+      const me=players[0];
+      if(me&&me.alive){me.hp=Math.min(me.mhp,me.hp+10);}
+      showPickupMsg('🐟 +10 HP!');
+      renderInventory();
+    }
+  }
+
+  if(!fishingState.active)return;
+  fishingState.timer--;
+
+  // Random bite after 2-4s
+  if(!fishingState.hooked&&fishingState.timer<(180-60-Math.random()*60)){
+    if(Math.random()<0.03){
+      fishingState.hooked=true;
+      fishingState.timer=90; // 1.5s to reel in
+      showPickupMsg('🐟 BEET! Klik snel op 🎣!');
+    }
+  }
+
+  // Timeout — no fish
+  if(fishingState.timer<=0){
+    if(fishingState.hooked){
+      // Too slow — fish got away
+      showPickupMsg('😢 Vis ontsnapt!');
+    } else {
+      showPickupMsg('🎣 Niets gevangen...');
+    }
+    fishingState.active=false;
+    renderInventory();
+  }
+}
+
+// Click on rod while hooked = catch fish
+document.addEventListener('click',e=>{
+  if(fishingState.active&&fishingState.hooked){
+    // Catch!
+    drops.push({type:'fish',wx:fishingState.castX,wy:fishingState.castY,life:600});
+    inventory.rod.hp-=10;
+    if(inventory.rod.hp<=0){
+      inventory.rod=null;
+      showPickupMsg('🎣 Vishengel kapot!');
+    } else {
+      showPickupMsg('🐟 Vis gevangen! Loop ernaartoe.');
+    }
+    fishingState.active=false;
+    renderInventory();
+  }
+});
+
 // ══════════════════════════════════════════ CLASSES
 const CLASSES={
   surfer: {col:'#5ac8fa',hp:85, spd:2.2,fr:28,maxA:6,relT:120,dmg:14,bspd:7,name:'Surfer'},
@@ -283,7 +502,7 @@ function update(ts){
   const me=players[0];
   if(me&&me.alive){camX+=(me.wx-SW/2-camX)*CAM_LERP;camY+=(me.wy-SH/2-camY)*CAM_LERP;camX=Math.max(0,Math.min(GC*TILE-SW,camX));camY=Math.max(0,Math.min(GR*TILE-SH,camY));}
 
-  updateBullets();updateIce();
+  updateBullets();updateIce();updateCrates();updateDrops();updateFishing();
   for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;if(p.gravity)p.vy+=p.gravity;p.vx*=.90;if(!p.gravity)p.vy*=.90;p.life--;}
   parts=parts.filter(p=>p.life>0);
 
@@ -459,6 +678,84 @@ function draw(){
   }
 
   for(const p of players)if(p.alive)drawPlayer(p);
+
+  // Draw fishing holes (light blue puddles)
+  for(const h of fishingHoles){
+    const{x,y}=toScreen(h.wx-TILE/2,h.wy-TILE/2);
+    if(x<-TILE||x>SW+TILE||y<-TILE||y>SH+TILE)continue;
+    const wt2=Date.now()*.0012;
+    // Light blue water puddle
+    ctx.fillStyle='#4ab8e8';ctx.beginPath();ctx.ellipse(x+TILE/2,y+TILE/2,TILE*.42,TILE*.32,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(120,210,255,${.3+Math.sin(wt2+h.r*.7)*.15})`;
+    ctx.beginPath();ctx.ellipse(x+TILE/2,y+TILE/2-4,TILE*.25,TILE*.12,0,0,Math.PI*2);ctx.fill();
+    // Shine
+    ctx.fillStyle='rgba(255,255,255,.35)';
+    ctx.beginPath();ctx.ellipse(x+TILE*.38,y+TILE*.38,TILE*.1,TILE*.06,-.5,0,Math.PI*2);ctx.fill();
+    // Label
+    ctx.font='14px serif';ctx.textAlign='center';
+    ctx.fillText('🐟',x+TILE/2,y+TILE/2+5);
+  }
+
+  // Draw crates
+  for(const cr of crates){
+    if(!cr.alive)continue;
+    const{x,y}=toScreen(cr.wx-TILE*.35,cr.wy-TILE*.35);
+    const sz=Math.floor(TILE*.7);
+    // Wood box
+    ctx.fillStyle='#8b6040';ctx.fillRect(x,y,sz,sz);
+    ctx.fillStyle='#a07848';ctx.fillRect(x+2,y+2,sz-4,sz*.45);
+    // Planks
+    ctx.strokeStyle='#5a3820';ctx.lineWidth=1.5;
+    ctx.strokeRect(x,y,sz,sz);
+    ctx.beginPath();ctx.moveTo(x,y+sz*.5);ctx.lineTo(x+sz,y+sz*.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+sz*.33,y);ctx.lineTo(x+sz*.33,y+sz);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+sz*.67,y);ctx.lineTo(x+sz*.67,y+sz);ctx.stroke();
+    // HP bar
+    const hpPct=cr.hp/cr.mhp;
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(x,y-8,sz,5);
+    ctx.fillStyle=hpPct>.5?'#3ad870':'#f0c040';ctx.fillRect(x,y-8,sz*hpPct,5);
+  }
+
+  // Draw drops (items on ground)
+  for(const d of drops){
+    const{x,y}=toScreen(d.wx,d.wy);
+    if(x<-20||x>SW+20||y<-20||y>SH+20)continue;
+    const pulse=0.85+Math.sin(Date.now()*.006)*.15;
+    ctx.save();ctx.globalAlpha=Math.min(1,d.life/60)*pulse;
+    // Glow
+    ctx.shadowColor=d.type==='rod'?'#f0c040':'#5ac8fa';ctx.shadowBlur=12;
+    // Box
+    ctx.fillStyle=d.type==='rod'?'rgba(240,192,60,.8)':'rgba(60,160,220,.8)';
+    ctx.fillRect(x-12,y-12,24,24);
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.strokeRect(x-12,y-12,24,24);
+    // Icon
+    ctx.shadowBlur=0;ctx.font='16px serif';ctx.textAlign='center';
+    ctx.fillText(d.type==='rod'?'🎣':'🐟',x,y+6);
+    ctx.restore();
+  }
+
+  // Fishing line
+  const meP=players[0];
+  if(meP&&meP.alive&&fishingState.active){
+    const{x:mx,y:my}=toScreen(meP.wx,meP.wy);
+    const{x:fx,y:fy}=toScreen(fishingState.castX,fishingState.castY);
+    ctx.save();
+    ctx.strokeStyle=fishingState.hooked?'#f0c040':'#c8a060';
+    ctx.lineWidth=fishingState.hooked?2.5:1.5;
+    ctx.setLineDash(fishingState.hooked?[]:[4,4]);
+    ctx.beginPath();ctx.moveTo(mx,my);
+    // Arc the line like a real fishing rod
+    const mx2=(mx+fx)/2,my2=Math.min(my,fy)-30;
+    ctx.quadraticCurveTo(mx2,my2,fx,fy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Bobber
+    ctx.fillStyle=fishingState.hooked?'#f04040':'#f0f040';
+    ctx.shadowColor=fishingState.hooked?'#ff0000':'#ffff00';
+    ctx.shadowBlur=fishingState.hooked?10:4;
+    ctx.beginPath();ctx.arc(fx,fy,5,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawPlayer(p){
@@ -590,7 +887,7 @@ document.getElementById('play-btn').addEventListener('click',()=>{
   document.getElementById('result-text').innerHTML='';
   document.getElementById('bot-cards').innerHTML='';
   document.getElementById('profile-panel').style.display='none';
-  initGrid();spawnAll();initIce();
+  initGrid();spawnAll();initIce();initFishingHoles();initCrates();initInventory();drops=[];
   const me=players[0];camX=me.wx-SW/2;camY=me.wy-SH/2;
   renderAmmo(me);running=true;
   if(fid)cancelAnimationFrame(fid);
