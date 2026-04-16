@@ -30,7 +30,7 @@ function saveCurrentUser(){if(!currentUser)return;const u=loadUsers();u[currentU
 function recordWin(cls){if(!currentUser)return;currentUser.wins[cls]=(currentUser.wins[cls]||0)+1;saveCurrentUser();updateProfileUI();}
 
 function showAuthScreen(){document.getElementById('auth-screen').style.display='flex';document.getElementById('overlay').style.display='none';document.getElementById('profile-btn').style.display='none';}
-function showMainMenu(){document.getElementById('auth-screen').style.display='none';document.getElementById('overlay').style.display='flex';document.getElementById('profile-btn').style.display='flex';updateProfileUI();}
+function showMainMenu(){document.getElementById('auth-screen').style.display='none';document.getElementById('overlay').style.display='flex';document.getElementById('profile-btn').style.display='flex';document.getElementById('profile-panel').style.display='none';updateProfileUI();}
 function updateProfileUI(){
   if(!currentUser)return;
   document.getElementById('profile-username').textContent=currentUser.username;
@@ -102,15 +102,41 @@ function isWall(r,c){if(r<0||r>=GR||c<0||c>=GC)return true;return grid[r][c]===T
 function blocked(wx,wy,rad=12){for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])if(isWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;return false;}
 
 // ══════════════════════════════════════════ ICE BREAKING
-let iceTimer=0,nextBreakTimer=0;
-const ICE_BREAK_START=60*18,ICE_BREAK_INTERVAL=80;
+let iceTimer=0;
+let iceRing=Math.floor(GR/2)-1; // current outermost ring (counts inward)
+let icePhase=0; // 0=tremor warning, 1=breaking
+let icePhaseTimer=0;
+const ICE_GRACE=60*12;       // 12s before first ring starts
+const ICE_TREMOR_DUR=60*3;   // 3s of shaking warning per ring
+const ICE_BREAK_DUR=60*1;    // 1s to actually break after tremor
+const ICE_NEXT_RING=60*6;    // 6s gap before next ring starts tremoring
 
-function initIce(){iceTimer=0;nextBreakTimer=ICE_BREAK_START;}
+function initIce(){
+  iceTimer=0; iceRing=Math.floor(GR/2)-1; icePhase=0; icePhaseTimer=ICE_GRACE;
+}
 
 function updateIce(){
-  iceTimer++;nextBreakTimer--;
-  if(nextBreakTimer<=0){nextBreakTimer=ICE_BREAK_INTERVAL;crumbleRing();}
+  iceTimer++; icePhaseTimer--;
   for(let r=0;r<GR;r++) for(let c=0;c<GC;c++) if(iceTremor[r][c]>0)iceTremor[r][c]--;
+
+  if(icePhaseTimer<=0){
+    if(icePhase===0){
+      // Start tremor on current ring
+      icePhase=1; icePhaseTimer=ICE_TREMOR_DUR;
+      setRingTremor(iceRing,true);
+    } else if(icePhase===1){
+      // Break the ring
+      icePhase=2; icePhaseTimer=ICE_BREAK_DUR;
+      breakRing(iceRing);
+    } else {
+      // Next ring
+      iceRing--;
+      if(iceRing>=1){ icePhase=0; icePhaseTimer=ICE_NEXT_RING; }
+      else icePhase=99; // done
+    }
+  }
+
+  // Damage players on broken tiles
   for(const p of players){
     if(!p.alive)continue;
     const tr=Math.floor(p.wy/TILE),tc=Math.floor(p.wx/TILE);
@@ -118,21 +144,19 @@ function updateIce(){
   }
 }
 
-function crumbleRing(){
-  const ring=1+Math.floor(iceTimer/(ICE_BREAK_INTERVAL*10));
-  const maxRing=Math.min(ring,Math.floor(GR/2)-3);
-  const candidates=[];
-  for(let r=maxRing;r<GR-maxRing;r++) for(let c=maxRing;c<GC-maxRing;c++)
-    if(r===maxRing||r===GR-1-maxRing||c===maxRing||c===GC-1-maxRing)
-      if(grid[r][c]!==T_WALL&&iceHP[r][c]>0)candidates.push({r,c});
-  const n=3+Math.floor(Math.random()*4);
-  for(let i=0;i<n&&candidates.length>0;i++){
-    const idx=Math.floor(Math.random()*candidates.length);
-    const{r,c}=candidates.splice(idx,1)[0];
-    iceHP[r][c]--;
-    if(iceHP[r][c]>0)iceTremor[r][c]=40+Math.floor(Math.random()*30);
-    else{iceTremor[r][c]=0;spawnIceFx(r,c);}
-  }
+function setRingTremor(ring,strong){
+  for(let r=ring;r<GR-ring;r++) for(let c=ring;c<GC-ring;c++)
+    if(r===ring||r===GR-1-ring||c===ring||c===GC-1-ring)
+      if(grid[r][c]!==T_WALL&&iceHP[r][c]>0)
+        iceTremor[r][c]=strong?ICE_TREMOR_DUR:20;
+}
+
+function breakRing(ring){
+  for(let r=ring;r<GR-ring;r++) for(let c=ring;c<GC-ring;c++)
+    if(r===ring||r===GR-1-ring||c===ring||c===GC-1-ring)
+      if(grid[r][c]!==T_WALL&&iceHP[r][c]>0){
+        iceHP[r][c]=0; iceTremor[r][c]=0; spawnIceFx(r,c);
+      }
 }
 
 function spawnIceFx(r,c){const wx=(c+.5)*TILE,wy=(r+.5)*TILE;for(let i=0;i<8;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*3;parts.push({wx,wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*18,ml:36,sz:3+Math.random()*5,col:'#b0d4ec'});}}
@@ -196,7 +220,11 @@ function update(ts){
   for(const p of players){
     if(!p.alive)continue;
     p.inv=Math.max(0,p.inv-1);p.cd=Math.max(0,p.cd-1);
-    if(p.ammo<p.maxA){p.relCd--;if(p.relCd<=0){p.ammo=p.maxA;p.relCd=0;}}
+    // Per-bullet reload
+    if(!p.reloadSlots)p.reloadSlots=[];
+    p.reloadSlots=p.reloadSlots.map(t=>t-1);
+    const reloaded=p.reloadSlots.filter(t=>t<=0).length;
+    if(reloaded>0){p.ammo=Math.min(p.maxA,p.ammo+reloaded);p.reloadSlots=p.reloadSlots.filter(t=>t>0);if(p.isP)renderAmmo(p);}
     if(p.frz>0){p.frz--;continue;}
     p.isP?doPlayerInput(p):doBotAI(p);
     const SPD=p.spd*2.2,nx=p.wx+p.vx*SPD,ny=p.wy+p.vy*SPD;
@@ -238,14 +266,33 @@ function doBotAI(p){
   let near=null,nd=Infinity;
   for(const o of players){if(!o.alive||o===p)continue;const dx=o.wx-p.wx,dy=o.wy-p.wy,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;near=o;}}
   p.ait--;
-  if(p.ait<=0){p.ait=18+Math.random()*22;if(near){const dx=near.wx-p.wx,dy=near.wy-p.wy,ln=Math.sqrt(dx*dx+dy*dy)||1;p.vx=dx/ln+(Math.random()-.5)*.4;p.vy=dy/ln+(Math.random()-.5)*.4;const vl=Math.sqrt(p.vx*p.vx+p.vy*p.vy)||1;p.vx/=vl;p.vy/=vl;}}
-  if(near){const dx=near.wx-p.wx,dy=near.wy-p.wy;p.angle=Math.atan2(dy,dx);if(nd<TILE*7&&p.cd===0&&p.ammo>0)shoot(p);}
+  if(p.ait<=0){
+    // Bots re-think slowly and with lots of randomness
+    p.ait=35+Math.random()*45;
+    if(near){
+      const dx=near.wx-p.wx,dy=near.wy-p.wy,ln=Math.sqrt(dx*dx+dy*dy)||1;
+      // Big wander offset — bots aren't accurate
+      p.vx=dx/ln+(Math.random()-.5)*1.2;
+      p.vy=dy/ln+(Math.random()-.5)*1.2;
+      const vl=Math.sqrt(p.vx*p.vx+p.vy*p.vy)||1;p.vx/=vl;p.vy/=vl;
+    }
+  }
+  if(near){
+    const dx=near.wx-p.wx,dy=near.wy-p.wy;
+    // Bots only shoot if close AND with a miss angle
+    const missAngle=(Math.random()-.5)*.5; // up to 0.5 rad off
+    p.angle=Math.atan2(dy,dx)+missAngle;
+    // Only shoot when close (4 tiles) and random chance to miss a shot
+    if(nd<TILE*4&&p.cd===0&&p.ammo>0&&Math.random()<0.6)shoot(p);
+  }
 }
 
 function shoot(p){
   if(p.ammo<=0)return;
   p.cd=p.fr;p.ammo--;
-  if(p.ammo===0)p.relCd=p.relT;
+  // Start reload timer for this bullet slot
+  if(!p.reloadSlots)p.reloadSlots=[];
+  p.reloadSlots.push(p.relT); // each bullet has its own countdown
   const n=p.cls==='soldier'?2:1;
   for(let i=0;i<n;i++){const spread=n>1?(i-.5)*.1:0,ang=p.angle+spread;bullets.push({wx:p.wx+Math.cos(ang)*(PLAYER_R+4),wy:p.wy+Math.sin(ang)*(PLAYER_R+4),vx:Math.cos(ang)*p.bspd*2,vy:Math.sin(ang)*p.bspd*2,own:p,dmg:p.dmg,col:p.col,life:75,frz:p.cls==='mage',trail:[]});}
   if(p.isP)renderAmmo(p);
@@ -376,7 +423,31 @@ function drawMinimap(){
 }
 
 // ══════════════════════════════════════════ HUD
-function renderAmmo(p){const wrap=document.getElementById('ammo-dots');wrap.innerHTML='';for(let i=0;i<p.maxA;i++){const d=document.createElement('div');d.className='ammo-dot'+(i>=p.ammo?' empty':'');wrap.appendChild(d);}}
+function renderAmmo(p){
+  const wrap=document.getElementById('ammo-dots');
+  wrap.innerHTML='';
+  const totalSlots=p.maxA;
+  const reloading=p.reloadSlots||[];
+  for(let i=0;i<totalSlots;i++){
+    const d=document.createElement('div');
+    if(i<p.ammo){
+      // Full bullet
+      d.className='ammo-dot';
+    } else {
+      // Empty or reloading
+      const slotIdx=i-p.ammo; // index into reloading slots
+      if(slotIdx<reloading.length){
+        // Reloading — show progress
+        const pct=Math.round((1-reloading[slotIdx]/p.relT)*100);
+        d.className='ammo-dot reloading';
+        d.style.background=`conic-gradient(${p.col} ${pct}%, #1a3050 ${pct}%)`;
+      } else {
+        d.className='ammo-dot empty';
+      }
+    }
+    wrap.appendChild(d);
+  }
+}
 
 function updateHUD(){
   const me=players[0];if(!me)return;
@@ -386,8 +457,8 @@ function updateHUD(){
   document.getElementById('my-hp-name').style.color=me.col;
   document.getElementById('my-hp-bar').style.width=(hpP*100)+'%';
   document.getElementById('my-hp-bar').style.background=hpP>.5?'linear-gradient(90deg,#3ad870,#5ac8fa)':hpP>.25?'linear-gradient(90deg,#f0c040,#e08020)':'linear-gradient(90deg,#f04040,#c02020)';
-  const reloadSec=me.ammo===0?` — HERLADEN (${Math.ceil(me.relCd/60)}s)`:'';
-  document.getElementById('my-hp-text').textContent=Math.ceil(me.hp)+' / '+me.mhp+' HP'+reloadSec;
+  const reloading=(me.reloadSlots||[]).length>0;
+  document.getElementById('my-hp-text').textContent=Math.ceil(me.hp)+' / '+me.mhp+' HP'+(reloading?' — herladen...':'');
   renderAmmo(me);
   const bc=document.getElementById('bot-cards');
   if(!bc.children.length){players.slice(1).forEach((p,i)=>{const d=document.createElement('div');d.className='bot-card';d.id='bc'+i;d.innerHTML=`<div class="bot-dot" style="background:${p.col}"></div><div class="bot-info"><div class="bot-name">${p.name}</div><div class="bot-bar-bg"><div class="bot-bar-fill" id="bbf${i}" style="width:100%;background:${p.col}"></div></div></div>`;bc.appendChild(d);});}
