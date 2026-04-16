@@ -62,7 +62,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050d1a;touch-action
 .bot-bar-bg{width:58px;height:4px;background:#0a1828;border-radius:2px;overflow:hidden;}
 .bot-bar-fill{height:100%;border-radius:2px;transition:width .1s;}
 
-/* MOBILE */
+/* INVENTORY BAR */
+#inventory-bar{
+  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;pointer-events:auto;
+}
+.inv-slot{
+  background:rgba(5,13,26,.85);border:2px solid #3a6a9a;
+  border-radius:12px;padding:8px 12px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;transition:border-color .15s,background .15s;
+  min-width:56px;
+}
+.inv-slot:hover{background:rgba(20,50,90,.9);border-color:#5ac8fa;}
+.inv-slot.active{border-color:#f0c040;background:rgba(40,30,10,.9);}
+.inv-icon{font-size:22px;line-height:1;}
+.inv-label{font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:800;color:#cde8ff;text-align:center;}
+
+/* PICKUP MESSAGE */
+#pickup-msg{
+  position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+  font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:700;
+  color:#f0f0c0;text-align:center;
+  background:rgba(5,13,26,.8);border:1px solid #3a6a5a;border-radius:10px;
+  padding:6px 16px;pointer-events:none;
+  opacity:0;transition:opacity .4s;white-space:nowrap;
+}
 #joystick-area{position:fixed;bottom:24px;left:24px;width:120px;height:120px;z-index:10;display:none;}
 #joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(10,30,60,.55);border:2px solid rgba(90,200,250,.28);}
 #joystick-knob{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(90,200,250,.45);border:2px solid rgba(90,200,250,.75);top:50%;left:50%;transform:translate(-50%,-50%);transition:none;}
