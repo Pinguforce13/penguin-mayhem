@@ -98,21 +98,27 @@ function initGrid(){
   [{r:4,c:4},{r:4,c:45},{r:45,c:4},{r:45,c:45},{r:24,c:24}].forEach(({r,c})=>{for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const nr=r+dr,nc=c+dc;if(nr>0&&nr<GR-1&&nc>0&&nc<GC-1){grid[nr][nc]=T_FLOOR;iceHP[nr][nc]=4;}}});
 }
 
-function isWall(r,c){if(r<0||r>=GR||c<0||c>=GC)return true;return grid[r][c]===T_WALL||iceHP[r][c]<=0;}
-function blocked(wx,wy,rad=12){for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])if(isWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;return false;}
+function isWall(r,c){if(r<0||r>=GR||c<0||c>=GC)return true;return grid[r][c]===T_WALL;}
+function isWater(r,c){if(r<0||r>=GR||c<0||c>=GC)return false;return grid[r][c]!==T_WALL&&iceHP[r][c]<=0;}
+function blocked(wx,wy,rad=12){
+  for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])
+    if(isWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;
+  return false;
+}
 
 // ══════════════════════════════════════════ ICE BREAKING
 let iceTimer=0;
-let iceRing=Math.floor(GR/2)-1; // current outermost ring (counts inward)
-let icePhase=0; // 0=tremor warning, 1=breaking
+let iceRing=1;            // start at outermost ring (ring 1 = just inside border)
+let icePhase=0;
 let icePhaseTimer=0;
-const ICE_GRACE=60*12;       // 12s before first ring starts
-const ICE_TREMOR_DUR=60*3;   // 3s of shaking warning per ring
-const ICE_BREAK_DUR=60*1;    // 1s to actually break after tremor
-const ICE_NEXT_RING=60*6;    // 6s gap before next ring starts tremoring
+const ICE_GRACE      = 60*14;  // 14s grace period
+const ICE_TREMOR_DUR = 60*3;   // 3s shaking warning
+const ICE_BREAK_DUR  = 60*1;   // 1s breaking animation
+const ICE_NEXT_RING  = 60*5;   // 5s before next ring
+const ICE_RING_MAX   = Math.floor(GR/2)-2; // how far inward we go
 
 function initIce(){
-  iceTimer=0; iceRing=Math.floor(GR/2)-1; icePhase=0; icePhaseTimer=ICE_GRACE;
+  iceTimer=0; iceRing=1; icePhase=0; icePhaseTimer=ICE_GRACE;
 }
 
 function updateIce(){
@@ -121,45 +127,84 @@ function updateIce(){
 
   if(icePhaseTimer<=0){
     if(icePhase===0){
-      // Start tremor on current ring
       icePhase=1; icePhaseTimer=ICE_TREMOR_DUR;
-      setRingTremor(iceRing,true);
+      setRingTremor(iceRing);
     } else if(icePhase===1){
-      // Break the ring
       icePhase=2; icePhaseTimer=ICE_BREAK_DUR;
       breakRing(iceRing);
     } else {
-      // Next ring
-      iceRing--;
-      if(iceRing>=1){ icePhase=0; icePhaseTimer=ICE_NEXT_RING; }
-      else icePhase=99; // done
+      iceRing++;
+      if(iceRing<=ICE_RING_MAX){ icePhase=0; icePhaseTimer=ICE_NEXT_RING; }
+      else icePhase=99;
     }
   }
 
-  // Damage players on broken tiles
+  // Water damage + stun
   for(const p of players){
     if(!p.alive)continue;
     const tr=Math.floor(p.wy/TILE),tc=Math.floor(p.wx/TILE);
-    if(tr>=0&&tr<GR&&tc>=0&&tc<GC&&iceHP[tr][tc]<=0&&grid[tr][tc]!==T_WALL)hurtPlayer(p,2);
+    if(tr<0||tr>=GR||tc<0||tc>=GC)continue;
+    const inWater = iceHP[tr][tc]<=0 && grid[tr][tc]!==T_WALL;
+    if(inWater){
+      // First frame falling in = splash + stun
+      if(!p.inWater){
+        p.inWater=true;
+        p.stunTimer=120; // 2s stun
+        spawnSplash(p.wx,p.wy);
+      }
+      // Slow movement in water
+      p.vx*=0.5; p.vy*=0.5;
+      // Damage (soft — can walk out)
+      if(p.stunTimer<=0) hurtPlayer(p,0.8);
+    } else {
+      p.inWater=false;
+    }
+    if(p.stunTimer>0) p.stunTimer--;
   }
 }
 
-function setRingTremor(ring,strong){
+function setRingTremor(ring){
   for(let r=ring;r<GR-ring;r++) for(let c=ring;c<GC-ring;c++)
     if(r===ring||r===GR-1-ring||c===ring||c===GC-1-ring)
       if(grid[r][c]!==T_WALL&&iceHP[r][c]>0)
-        iceTremor[r][c]=strong?ICE_TREMOR_DUR:20;
+        iceTremor[r][c]=ICE_TREMOR_DUR;
 }
 
 function breakRing(ring){
   for(let r=ring;r<GR-ring;r++) for(let c=ring;c<GC-ring;c++)
     if(r===ring||r===GR-1-ring||c===ring||c===GC-1-ring)
       if(grid[r][c]!==T_WALL&&iceHP[r][c]>0){
-        iceHP[r][c]=0; iceTremor[r][c]=0; spawnIceFx(r,c);
+        iceHP[r][c]=0; iceTremor[r][c]=0;
+        spawnIceFx(r,c);
       }
 }
 
-function spawnIceFx(r,c){const wx=(c+.5)*TILE,wy=(r+.5)*TILE;for(let i=0;i<8;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*3;parts.push({wx,wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*18,ml:36,sz:3+Math.random()*5,col:'#b0d4ec'});}}
+function spawnIceFx(r,c){
+  const wx=(c+.5)*TILE, wy=(r+.5)*TILE;
+  for(let i=0;i<10;i++){
+    const a=Math.random()*Math.PI*2, s=2+Math.random()*4;
+    parts.push({wx:wx+(Math.random()-.5)*TILE*.6, wy:wy+(Math.random()-.5)*TILE*.6,
+      vx:Math.cos(a)*s, vy:Math.sin(a)*s,
+      life:20+Math.random()*20, ml:40, sz:4+Math.random()*6, col:'#d0eeff', type:'ice'});
+  }
+}
+
+function spawnSplash(wx,wy){
+  // Ring of water droplets
+  for(let i=0;i<16;i++){
+    const a=(i/16)*Math.PI*2;
+    const s=2+Math.random()*3;
+    parts.push({wx, wy, vx:Math.cos(a)*s, vy:Math.sin(a)*s,
+      life:22+Math.random()*18, ml:40, sz:3+Math.random()*5,
+      col:i%2===0?'#5ac8fa':'#90d8f8', type:'splash'});
+  }
+  // Big splash ring particles that arc up then fall
+  for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2;
+    parts.push({wx, wy, vx:Math.cos(a)*4, vy:Math.sin(a)*4-5,
+      life:30, ml:30, sz:5, col:'#b0e8ff', type:'splash', gravity:0.3});
+  }
+}
 
 // ══════════════════════════════════════════ PARTICLES
 let parts=[];
@@ -185,7 +230,7 @@ function spawnAll(){
   while(bots.length<4)bots.push(bots[Math.floor(Math.random()*bots.length)]);
   [{cls:selectedClass,isP:true},{cls:bots[0],isP:false},{cls:bots[1],isP:false},{cls:bots[2],isP:false},{cls:bots[3],isP:false}].forEach((cfg,i)=>{
     const d=CLASSES[cfg.cls],s=spawns[i];
-    players.push({wx:s.wx,wy:s.wy,vx:0,vy:0,cls:cfg.cls,isP:cfg.isP,hp:d.hp,mhp:d.hp,spd:d.spd,fr:d.fr,ammo:d.maxA,maxA:d.maxA,relT:d.relT,relCd:0,dmg:d.dmg,bspd:d.bspd,col:d.col,name:cfg.isP?'JIJ':d.name,alive:true,cd:0,inv:0,angle:Math.PI/4,frz:0,ait:0,bob:Math.random()*Math.PI*2});
+    players.push({wx:s.wx,wy:s.wy,vx:0,vy:0,cls:cfg.cls,isP:cfg.isP,hp:d.hp,mhp:d.hp,spd:d.spd,fr:d.fr,ammo:d.maxA,maxA:d.maxA,relT:d.relT,relCd:0,dmg:d.dmg,bspd:d.bspd,col:d.col,name:cfg.isP?'JIJ':d.name,alive:true,cd:0,inv:0,angle:Math.PI/4,frz:0,ait:0,bob:Math.random()*Math.PI*2,inWater:false,stunTimer:0,reloadSlots:[]});
   });
 }
 
@@ -225,7 +270,7 @@ function update(ts){
     p.reloadSlots=p.reloadSlots.map(t=>t-1);
     const reloaded=p.reloadSlots.filter(t=>t<=0).length;
     if(reloaded>0){p.ammo=Math.min(p.maxA,p.ammo+reloaded);p.reloadSlots=p.reloadSlots.filter(t=>t>0);if(p.isP)renderAmmo(p);}
-    if(p.frz>0){p.frz--;continue;}
+    if(p.frz>0||p.stunTimer>0){p.frz=Math.max(0,p.frz-1);continue;}
     p.isP?doPlayerInput(p):doBotAI(p);
     const SPD=p.spd*2.2,nx=p.wx+p.vx*SPD,ny=p.wy+p.vy*SPD;
     if(!blocked(nx,p.wy,PLAYER_R))p.wx=nx;else p.vx=0;
@@ -239,7 +284,7 @@ function update(ts){
   if(me&&me.alive){camX+=(me.wx-SW/2-camX)*CAM_LERP;camY+=(me.wy-SH/2-camY)*CAM_LERP;camX=Math.max(0,Math.min(GC*TILE-SW,camX));camY=Math.max(0,Math.min(GR*TILE-SH,camY));}
 
   updateBullets();updateIce();
-  for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;p.vx*=.90;p.vy*=.90;p.life--;}
+  for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;if(p.gravity)p.vy+=p.gravity;p.vx*=.90;if(!p.gravity)p.vy*=.90;p.life--;}
   parts=parts.filter(p=>p.life>0);
 
   updateHUD();
@@ -314,39 +359,82 @@ function killPlayer(p){p.alive=false;p.hp=0;spawnDeathFx(p.wx,p.wy,p.col);}
 
 // ══════════════════════════════════════════ DRAW
 function draw(){
-  ctx.fillStyle='#d0eaf8';ctx.fillRect(0,0,SW,SH);
+  ctx.fillStyle='#060e1e';ctx.fillRect(0,0,SW,SH);
   const sC=Math.max(0,Math.floor(camX/TILE)-1),eC=Math.min(GC,Math.ceil((camX+SW)/TILE)+1);
   const sR=Math.max(0,Math.floor(camY/TILE)-1),eR=Math.min(GR,Math.ceil((camY+SH)/TILE)+1);
+  const wt=Date.now()*.001;
 
   for(let r=sR;r<eR;r++) for(let c=sC;c<eC;c++){
     const wx=c*TILE,wy=r*TILE,cell=grid[r][c],hp=iceHP[r][c],tremor=iceTremor[r][c];
-    const shk=tremor>0?(Math.random()-.5)*(tremor>20?3:1.5):0;
+    const shk=tremor>0?(Math.random()-.5)*(tremor>ICE_TREMOR_DUR*.5?4:2):0;
     const{x,y}=toScreen(wx+shk,wy+shk*.5);
+
     if(cell===T_WALL){
       ctx.fillStyle='#2a3e5a';ctx.fillRect(x,y,TILE,TILE);
-      ctx.fillStyle='#3a5272';ctx.fillRect(x+2,y+2,TILE-4,Math.floor(TILE*.5));
+      ctx.fillStyle='#3a5272';ctx.fillRect(x+2,y+2,TILE-4,Math.floor(TILE*.48));
+      ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(x+2,y+2,TILE-4,5);
       ctx.fillStyle='#18283c';ctx.fillRect(x,y+TILE-5,TILE,5);
+      ctx.strokeStyle='#1a2a3e';ctx.lineWidth=1;ctx.strokeRect(x,y,TILE,TILE);
     } else if(hp<=0){
-      ctx.fillStyle='#1a5080';ctx.fillRect(x,y,TILE,TILE);
-      ctx.fillStyle=`rgba(60,140,210,.15)`;ctx.fillRect(x+4,y+Math.floor(TILE*.35),TILE-8,4);
+      // Dark animated water
+      const wave=Math.sin(wt*1.2+r*.8+c*.6);
+      ctx.fillStyle='#06121e';ctx.fillRect(x,y,TILE,TILE);
+      ctx.fillStyle=`rgba(15,55,110,${0.22+wave*.07})`;
+      ctx.fillRect(x+2,y+Math.floor(TILE*.22),TILE-4,4);
+      ctx.fillStyle=`rgba(15,55,110,${0.14+Math.sin(wt*1.6+r*.5+c*.9)*.05})`;
+      ctx.fillRect(x+5,y+Math.floor(TILE*.58),TILE-10,3);
+      ctx.strokeStyle='rgba(15,50,90,.4)';ctx.lineWidth=.5;ctx.strokeRect(x,y,TILE,TILE);
     } else {
-      const cols=['#90b8d4','#aacce0','#c8e0f0','#e4f4ff'];
-      ctx.fillStyle=cols[4-hp]||'#e4f4ff';ctx.fillRect(x,y,TILE,TILE);
-      ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(x+2,y+2,TILE-4,Math.floor(TILE*.26));
+      // Very white ice
+      const iceC=['#b0d4ee','#cce4f6','#e2f2fc','#f2faff'];
+      ctx.fillStyle=iceC[hp-1]||'#f2faff';ctx.fillRect(x,y,TILE,TILE);
+      // Snow top
+      ctx.fillStyle='rgba(255,255,255,.38)';ctx.fillRect(x+1,y+1,TILE-2,Math.floor(TILE*.2));
+      // Diagonal shine
+      ctx.fillStyle='rgba(255,255,255,.2)';
+      ctx.beginPath();ctx.moveTo(x+3,y+3);ctx.lineTo(x+TILE*.38,y+3);ctx.lineTo(x+3,y+TILE*.38);ctx.closePath();ctx.fill();
+
+      // Cracks
       if(hp<=3){
-        ctx.strokeStyle=`rgba(50,90,130,${hp<=1?.7:hp<=2?.42:.22})`;ctx.lineWidth=hp<=1?1.5:.8;ctx.beginPath();
-        ctx.moveTo(x+8,y+10);ctx.lineTo(x+22,y+20);ctx.moveTo(x+22,y+20);ctx.lineTo(x+18,y+32);
-        if(hp<=2){ctx.moveTo(x+28,y+8);ctx.lineTo(x+16,y+24);ctx.moveTo(x+6,y+28);ctx.lineTo(x+14,y+16);}
-        if(hp<=1){ctx.moveTo(x+2,y+2);ctx.lineTo(x+TILE-2,y+TILE-2);ctx.moveTo(x+TILE-2,y+2);ctx.lineTo(x+2,y+TILE-2);}
+        ctx.strokeStyle=`rgba(70,120,170,${hp<=1?.8:hp<=2?.55:.3})`;
+        ctx.lineWidth=hp<=1?2:hp<=2?1.2:.8;
+        ctx.beginPath();
+        ctx.moveTo(x+8,y+12);ctx.lineTo(x+24,y+22);ctx.moveTo(x+24,y+22);ctx.lineTo(x+18,y+36);
+        if(hp<=2){ctx.moveTo(x+32,y+8);ctx.lineTo(x+18,y+26);ctx.moveTo(x+5,y+30);ctx.lineTo(x+16,y+18);}
+        if(hp<=1){
+          ctx.moveTo(x+2,y+2);ctx.lineTo(x+TILE-2,y+TILE-2);
+          ctx.moveTo(x+TILE-2,y+2);ctx.lineTo(x+2,y+TILE-2);
+          ctx.moveTo(x+TILE/2,y+2);ctx.lineTo(x+TILE/2,y+TILE-2);
+        }
         ctx.stroke();
       }
-      ctx.strokeStyle='rgba(130,190,220,.18)';ctx.lineWidth=.5;ctx.strokeRect(x,y,TILE,TILE);
+      // Warning glow (about to break)
+      if(tremor>ICE_TREMOR_DUR*.55){
+        const g=(tremor-ICE_TREMOR_DUR*.55)/(ICE_TREMOR_DUR*.45);
+        ctx.fillStyle=`rgba(255,100,30,${g*.35})`;ctx.fillRect(x,y,TILE,TILE);
+      }
+      ctx.strokeStyle='rgba(180,220,255,.22)';ctx.lineWidth=.5;ctx.strokeRect(x,y,TILE,TILE);
     }
+  }
+
+  // Warning text
+  if(icePhase===1){
+    const sec=Math.ceil(icePhaseTimer/60);
+    const pulse=0.8+Math.sin(Date.now()*.01)*.2;
+    ctx.save();ctx.fillStyle=`rgba(255,120,40,${pulse})`;
+    ctx.font='bold 15px Segoe UI';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=8;
+    ctx.fillText(`⚠️ Ijs breekt in ${sec}s!`,SW/2,55);ctx.restore();
   }
 
   // Particles
   ctx.save();
-  for(const p of parts){const{x,y}=toScreen(p.wx,p.wy);if(x<-20||x>SW+20||y<-20||y>SH+20)continue;ctx.globalAlpha=(p.life/p.ml)*.8;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(x,y,Math.max(.5,p.sz*(p.life/p.ml)),0,Math.PI*2);ctx.fill();}
+  for(const p of parts){
+    const{x,y}=toScreen(p.wx,p.wy);
+    if(x<-20||x>SW+20||y<-20||y>SH+20)continue;
+    ctx.globalAlpha=(p.life/p.ml)*.85;
+    ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(x,y,Math.max(.5,p.sz*(p.life/p.ml)),0,Math.PI*2);ctx.fill();
+  }
   ctx.restore();
 
   // Bullets
@@ -380,12 +468,34 @@ function drawPlayer(p){
   ctx.save();
   if(p.inv>0&&Math.floor(p.inv/3)%2===0)ctx.globalAlpha=.28;
   if(p.frz>0){ctx.shadowColor='#80d0ff';ctx.shadowBlur=12;}
+  if(p.inWater){ctx.shadowColor='#3080c0';ctx.shadowBlur=16;}
 
   // Shadow
   ctx.save();ctx.globalAlpha=(ctx.globalAlpha||1)*.15;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px+2,py+2,R,R*.6,0,0,Math.PI*2);ctx.fill();ctx.restore();
 
-  ctx.fillStyle=p.frz>0?'#c0e8ff':'#16162a';ctx.beginPath();ctx.arc(px,py,R,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(px,py,R*.58,0,Math.PI*2);ctx.fill();
+  // Body — blue tint in water
+  const bodyCol=p.frz>0?'#c0e8ff':p.inWater?'#2060a0':'#16162a';
+  ctx.fillStyle=bodyCol;ctx.beginPath();ctx.arc(px,py,R,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=p.inWater?'#4090d0':p.col;ctx.beginPath();ctx.arc(px,py,R*.58,0,Math.PI*2);ctx.fill();
+
+  // Water ripple around player
+  if(p.inWater){
+    const rp=Date.now()*.004;
+    ctx.save();ctx.strokeStyle='rgba(80,160,220,.4)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.ellipse(px,py+R*.3,R*1.3,R*.4,0,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Stun stars
+  if(p.stunTimer>0&&p.isP){
+    const sf=Date.now()*.005;
+    for(let i=0;i<3;i++){
+      const a=sf+i*(Math.PI*2/3);
+      const sx=px+Math.cos(a)*R*1.2, sy=py-R+Math.sin(a)*R*.3-4;
+      ctx.font='12px serif';ctx.textAlign='center';
+      ctx.fillText('⭐',sx,sy);
+    }
+  }
 
   // Facing dot
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+Math.cos(p.angle)*R,py+Math.sin(p.angle)*R,4,0,Math.PI*2);ctx.fill();
@@ -414,7 +524,7 @@ function drawMinimap(){
   const S=92;mmx.clearRect(0,0,S,S);const sc=S/GC;
   for(let r=0;r<GR;r++) for(let c=0;c<GC;c++){
     const cell=grid[r][c],hp=iceHP[r][c];
-    mmx.fillStyle=cell===T_WALL?'#2a3e5a':hp<=0?'#1a5080':hp<=2?'#7aaac4':hp<=3?'#98c0d8':'#c0dcea';
+    mmx.fillStyle=cell===T_WALL?'#2a3e5a':hp<=0?'#06121e':hp<=2?'#7aaac4':hp<=3?'#98c0d8':'#d8f0ff';
     mmx.fillRect(c*sc,r*sc,sc,sc);
   }
   for(const p of players){if(!p.alive)continue;mmx.fillStyle=p.col;mmx.beginPath();mmx.arc(p.wx/TILE*sc,p.wy/TILE*sc,p.isP?3:2,0,Math.PI*2);mmx.fill();}
