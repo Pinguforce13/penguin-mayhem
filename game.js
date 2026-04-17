@@ -64,9 +64,15 @@ function updateMountainDisplay(){
   MODES.forEach(mode=>{
     const km=getMountainKm(mode);
     const zone=getZone(km);
-    const el=document.getElementById('mm-'+mode);
-    if(el) el.textContent=`${zone.icon} ${zone.name} — ${km.toFixed(1)} km`;
+    const label=`${zone.icon} ${zone.name} — ${km.toFixed(1)} km`;
+    // popup labels
+    const mpm=document.getElementById('mpm-'+mode);
+    if(mpm)mpm.textContent=label;
   });
+  // Update current mode label in menu button
+  const modeNames={showdown:'⚔️ Showdown',snowball:'❄️ Snowball Fight'};
+  const lbl=document.getElementById('current-mode-label');
+  if(lbl)lbl.textContent=modeNames[selectedMode]||selectedMode;
 }
 
 function updateCharKmDisplay(){
@@ -132,6 +138,9 @@ function showMainMenu(){
   document.getElementById('overlay').style.display='flex';
   document.getElementById('profile-btn').style.display='flex';
   document.getElementById('profile-panel').style.display='none';
+  document.getElementById('result-overlay').style.display='none';
+  document.getElementById('exit-btn').style.display='none';
+  document.getElementById('mode-popup').style.display='none';
   updateProfileUI();updateMountainDisplay();updateCharKmDisplay();
 }
 function updateProfileUI(){
@@ -184,15 +193,24 @@ if(currentUser){if(!currentUser.mountains)currentUser.mountains={};if(currentUse
 let selectedMode='showdown';
 let selectedClass='surfer';
 
-document.querySelectorAll('.mode-btn').forEach(btn=>{
+// ── GAMEMODE POPUP
+document.getElementById('open-modes-btn').addEventListener('click',()=>{
+  document.getElementById('mode-popup').style.display='flex';
+  updateMountainDisplay();
+});
+document.getElementById('mode-popup-close').addEventListener('click',()=>{
+  document.getElementById('mode-popup').style.display='none';
+});
+document.querySelectorAll('.mode-popup-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
-    btn.classList.add('selected');
+    document.querySelectorAll('.mode-popup-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
     selectedMode=btn.dataset.mode;
     updateCharKmDisplay();
-    // Update subtitle
-    const subs={showdown:'Last Penguin Standing',snowball:'Kleur het terrein!'};
-    document.querySelector('.sub').textContent=subs[selectedMode]||'';
+    const modeNames={showdown:'⚔️ Showdown',snowball:'❄️ Snowball Fight'};
+    const lbl=document.getElementById('current-mode-label');
+    if(lbl)lbl.textContent=modeNames[selectedMode]||selectedMode;
+    document.getElementById('mode-popup').style.display='none';
   });
 });
 document.querySelectorAll('.char-card').forEach(card=>{
@@ -714,46 +732,76 @@ function updateHUD(){
 }
 
 // ══════════════════════════════════════════
-//  RESULT
+//  RESULT + EXIT
 // ══════════════════════════════════════════
 function showResult(winner){
-  document.getElementById('overlay').style.display='flex';
-  updateMountainDisplay();updateCharKmDisplay();
-  const rt=document.getElementById('result-text');
+  running=false;
+  document.getElementById('exit-btn').style.display='none';
+  const ro=document.getElementById('result-overlay');
+  ro.style.display='flex';
+  const emoji=document.getElementById('result-emoji');
+  const title=document.getElementById('result-title');
+  const kmText=document.getElementById('result-km-text');
+
   if(selectedMode==='showdown'){
-    if(!winner)rt.innerHTML='<span class="lose">💀 Gelijkspel!</span>';
-    else if(winner.isP){
-      const km=getMountainKmPerChar(selectedMode,selectedClass);
-      const zone=getZone(km);
-      rt.innerHTML=`<span class="win">🏆 JIJ WINT! +1 km →  ${zone.icon} ${km.toFixed(1)} km</span>`;
-    } else rt.innerHTML=`<span class="lose">💀 ${winner.name} won. -0.5 km</span>`;
+    if(!winner){emoji.textContent='🤝';title.textContent='Gelijkspel!';title.style.color='#f0c040';}
+    else if(winner.isP){emoji.textContent='🏆';title.textContent='JIJ WINT!';title.style.color='#5ac8fa';}
+    else{emoji.textContent='💀';title.textContent=`${winner.name} won!`;title.style.color='#ff7a5a';}
   } else if(selectedMode==='snowball'){
     const{bluePct,redPct}=getScores();
-    if(bluePct>redPct){
-      const km=getMountainKmPerChar(selectedMode,selectedClass);
-      const zone=getZone(km);
-      rt.innerHTML=`<span class="win">🏆 BLAUW WINT! ${bluePct}% vs ${redPct}% →  ${zone.icon} ${km.toFixed(1)} km</span>`;
-    } else rt.innerHTML=`<span class="lose">❌ ROOD WINT! ${redPct}% vs ${bluePct}%  -0.5 km</span>`;
+    if(bluePct>redPct){emoji.textContent='🏆';title.textContent=`BLAUW WINT! ${bluePct}% vs ${redPct}%`;title.style.color='#5ac8fa';}
+    else{emoji.textContent='❌';title.textContent=`ROOD WINT! ${redPct}% vs ${bluePct}%`;title.style.color='#ff7a5a';}
   }
-  document.getElementById('play-btn').textContent='▶ OPNIEUW';
+
+  const km=getMountainKmPerChar(selectedMode,selectedClass);
+  const zone=getZone(km);
+  kmText.textContent=`${zone.icon} ${zone.name} — ${km.toFixed(1)} km op de berg`;
+  updateMountainDisplay();updateCharKmDisplay();
 }
+
+// Exit during game
+document.getElementById('exit-btn').addEventListener('click',()=>{
+  running=false;
+  if(fid)cancelAnimationFrame(fid);
+  recordLoss(selectedClass);
+  showMainMenu();
+});
+
+// Result buttons
+document.getElementById('result-play-again').addEventListener('click',()=>{
+  document.getElementById('result-overlay').style.display='none';
+  startGame();
+});
+document.getElementById('result-exit').addEventListener('click',()=>{
+  document.getElementById('result-overlay').style.display='none';
+  showMainMenu();
+});
 
 // ══════════════════════════════════════════
 //  START
 // ══════════════════════════════════════════
-document.getElementById('play-btn').addEventListener('click',()=>{
+function startGame(){
   document.getElementById('overlay').style.display='none';
-  document.getElementById('result-text').innerHTML='';
+  document.getElementById('result-overlay').style.display='none';
   document.getElementById('bot-cards').innerHTML='';
   document.getElementById('profile-panel').style.display='none';
   document.getElementById('inventory-bar').innerHTML='';
+  document.getElementById('exit-btn').style.display='block';
 
   initGrid();spawnAll();initIce();
-  if(selectedMode==='snowball'){initSnowball();document.getElementById('sb-score').style.display='flex';document.getElementById('alive-wrap').style.display='none';}
-  else{document.getElementById('sb-score').style.display='none';document.getElementById('alive-wrap').style.display='block';}
+  if(selectedMode==='snowball'){
+    initSnowball();
+    document.getElementById('sb-score').style.display='flex';
+    document.getElementById('alive-wrap').style.display='none';
+  } else {
+    document.getElementById('sb-score').style.display='none';
+    document.getElementById('alive-wrap').style.display='block';
+  }
 
   const me=players[0];camX=me.wx-SW/2;camY=me.wy-SH/2;
   renderAmmo(me);running=true;
   if(fid)cancelAnimationFrame(fid);
   lt=performance.now();fid=requestAnimationFrame(update);
-});
+}
+
+document.getElementById('play-btn').addEventListener('click', startGame);
