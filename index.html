@@ -38,6 +38,11 @@
   <div id="minimap-wrap"><canvas id="minimap" width="92" height="92"></canvas></div>
   <div id="ammo-wrap"><div id="ammo-lbl">Ammo</div><div id="ammo-dots"></div></div>
   <div id="bot-cards"></div>
+  <!-- Snowball mode score -->
+  <div id="sb-score" style="display:none">
+    <div id="sb-blue-score">🔵 0%</div>
+    <div id="sb-red-score">🔴 0%</div>
+  </div>
   <div id="inventory-bar"></div>
   <div id="pickup-msg"></div>
 </div>
@@ -47,10 +52,7 @@
 <div id="shoot-btn">🔫</div>
 
 <!-- PROFILE BUTTON -->
-<button id="profile-btn">
-  <span>👤</span>
-  <span id="profile-btn-label"></span>
-</button>
+<button id="profile-btn"><span>👤</span><span id="profile-btn-label"></span></button>
 
 <!-- PROFILE PANEL -->
 <div id="profile-panel">
@@ -64,14 +66,34 @@
   </div>
   <div id="profile-wins-title">🏆 Wins per class</div>
   <div id="profile-wins"></div>
+  <div id="profile-mountains-title">🏔️ Berg voortgang</div>
+  <div id="profile-mountains"></div>
   <button id="auth-logout">🚪 Uitloggen</button>
 </div>
 
-<!-- MENU -->
+<!-- MAIN MENU -->
 <div id="overlay">
   <div id="overlay-penguin">🐧</div>
   <h1>PENGUIN MAYHEM<br><span id="overlay-sub">ICEBREAKERS</span></h1>
-  <p class="sub">Showdown — Last Penguin Standing</p>
+
+  <!-- GAMEMODE SELECT -->
+  <div id="mode-select-label">Kies gamemode</div>
+  <div id="mode-select">
+    <div class="mode-btn selected" data-mode="showdown">
+      <div class="mode-icon">⚔️</div>
+      <div class="mode-name">Showdown</div>
+      <div class="mode-desc">Last Penguin Standing</div>
+      <div class="mode-mountain" id="mm-showdown">🏔️ Berg laden...</div>
+    </div>
+    <div class="mode-btn" data-mode="snowball">
+      <div class="mode-icon">❄️</div>
+      <div class="mode-name">Snowball Fight</div>
+      <div class="mode-desc">Kleur het terrein!</div>
+      <div class="mode-mountain" id="mm-snowball">🏔️ Berg laden...</div>
+    </div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
   <div id="char-select-label">Kies jouw class</div>
   <div id="char-select">
     <div class="char-card selected" data-cls="surfer">
@@ -82,7 +104,8 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:90%;background:#5ac8fa"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:50%;background:#5ac8fa"></div></div></div>
       </div>
-      <div class="char-desc">Super snel • 6 ammo • 2s reload</div>
+      <div class="char-desc">Super snel • 6 ammo</div>
+      <div class="char-km" id="ckm-surfer">— km</div>
     </div>
     <div class="char-card" data-cls="soldier">
       <div class="char-emoji">🪖</div>
@@ -92,7 +115,8 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:75%;background:#ff9a5a"></div></div></div>
       </div>
-      <div class="char-desc">Dubbel schot • 8 ammo • 1.5s reload</div>
+      <div class="char-desc">Dubbel schot • 8 ammo</div>
+      <div class="char-km" id="ckm-soldier">— km</div>
     </div>
     <div class="char-card" data-cls="mage">
       <div class="char-emoji">🧊</div>
@@ -102,7 +126,8 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:50%;background:#a080f8"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:95%;background:#a080f8"></div></div></div>
       </div>
-      <div class="char-desc">Bevriest • 4 ammo • 2.5s reload</div>
+      <div class="char-desc">Bevriest • 4 ammo</div>
+      <div class="char-km" id="ckm-mage">— km</div>
     </div>
     <div class="char-card" data-cls="tank">
       <div class="char-emoji">🛡️</div>
@@ -112,9 +137,11 @@
         <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:30%;background:#f0c040"></div></div></div>
         <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:70%;background:#f0c040"></div></div></div>
       </div>
-      <div class="char-desc">Veel HP • 3 ammo • 3s reload</div>
+      <div class="char-desc">Veel HP • 3 ammo</div>
+      <div class="char-km" id="ckm-tank">— km</div>
     </div>
   </div>
+
   <div id="result-text"></div>
   <button id="play-btn">▶ SPEEL</button>
   <div id="kb-hint">WASD / pijltjes bewegen &nbsp;|&nbsp; SPATIE schieten &nbsp;|&nbsp; 📱 sleep 🔫 om te mikken</div>
