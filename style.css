@@ -92,7 +92,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050d1a;touch-action
 #shoot-btn{position:fixed;bottom:36px;right:36px;width:78px;height:78px;border-radius:50%;background:rgba(255,80,50,.22);border:2px solid rgba(255,110,70,.55);display:none;align-items:center;justify-content:center;font-size:28px;z-index:10;touch-action:none;user-select:none;transition:background .1s,transform .1s;}
 
 /* ══ OVERLAY ══ */
-#overlay{position:fixed;inset:0;background:rgba(5,13,26,.94);display:none;flex-direction:column;align-items:center;justify-content:flex-start;z-index:20;gap:10px;padding:16px 20px 24px;overflow-y:auto;}
+#overlay{position:fixed;inset:0;background:rgba(5,13,26,.94);display:none;flex-direction:column;align-items:center;justify-content:flex-start;z-index:20;gap:10px;padding:16px 20px 24px;overflow-y:auto;pointer-events:auto;}
 #overlay-penguin{font-size:44px;animation:bob 2s ease-in-out infinite;margin-top:8px;}
 #overlay h1{font-family:'Segoe UI',sans-serif;font-size:clamp(20px,4vw,40px);font-weight:900;color:#cde8ff;letter-spacing:2px;text-align:center;line-height:1.1;}
 #overlay-sub{font-size:clamp(12px,2.5vw,20px);color:#5ac8fa;}
@@ -101,7 +101,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050d1a;touch-action
 /* ══ GAMEMODE SELECT ══ */
 #mode-select-label{font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:800;color:#3a6a9a;letter-spacing:3px;text-transform:uppercase;}
 #mode-select{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:480px;}
-.mode-btn{background:#0d2040;border:2px solid #1a3a6a;border-radius:14px;padding:12px 16px;min-width:160px;cursor:pointer;transition:transform .15s,border-color .15s;text-align:center;flex:1;}
+.mode-btn{background:#0d2040;border:2px solid #1a3a6a;border-radius:14px;padding:12px 16px;min-width:160px;cursor:pointer;transition:transform .15s,border-color .15s;text-align:center;flex:1;pointer-events:auto;}
 .mode-btn:hover{transform:translateY(-3px);border-color:#3a6aaa;}
 .mode-btn.selected{background:#142840;transform:translateY(-3px);border-color:#5ac8fa;}
 .mode-btn[data-mode="snowball"].selected{border-color:#a0d8f8;}
@@ -110,7 +110,42 @@ html,body{width:100%;height:100%;overflow:hidden;background:#050d1a;touch-action
 .mode-desc{font-family:'Segoe UI',sans-serif;font-size:10px;color:#5a84a8;margin-bottom:6px;}
 .mode-mountain{font-family:'Segoe UI',sans-serif;font-size:10px;color:#5ac8fa;font-weight:700;}
 
-/* ══ CHARACTER SELECT ══ */
+/* ══ GAMEMODE POPUP ══ */
+#mode-popup{position:fixed;inset:0;background:rgba(5,13,26,.92);display:none;align-items:center;justify-content:center;z-index:35;pointer-events:auto;}
+#mode-popup-box{background:#0d2040;border:1px solid #2a5a9a;border-radius:20px;padding:28px 24px;width:340px;max-width:92vw;display:flex;flex-direction:column;gap:14px;align-items:center;}
+#mode-popup h2{font-family:'Segoe UI',sans-serif;font-size:20px;font-weight:900;color:#cde8ff;letter-spacing:1px;}
+.mode-popup-btn{width:100%;background:#0a1830;border:2px solid #1a3a6a;border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color .15s,background .15s;pointer-events:auto;}
+.mode-popup-btn:hover{border-color:#3a6aaa;background:#142840;}
+.mode-popup-btn.active{border-color:#5ac8fa;background:#142840;}
+.mode-popup-btn[data-mode="snowball"].active{border-color:#a0d8f8;}
+.mpb-icon{font-size:28px;flex-shrink:0;}
+.mpb-info{text-align:left;}
+.mpb-name{font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:800;color:#cde8ff;margin-bottom:2px;}
+.mpb-desc{font-family:'Segoe UI',sans-serif;font-size:11px;color:#5a84a8;margin-bottom:4px;}
+.mpb-km{font-family:'Segoe UI',sans-serif;font-size:11px;color:#5ac8fa;font-weight:700;}
+#mode-popup-close{background:none;border:1px solid #1a3a6a;border-radius:10px;padding:8px 24px;color:#5a84a8;font-family:'Segoe UI',sans-serif;font-size:13px;cursor:pointer;transition:border-color .15s;}
+#mode-popup-close:hover{border-color:#3a6aaa;color:#cde8ff;}
+
+/* ══ GAME MODES BUTTON IN MENU ══ */
+#open-modes-btn{background:#0d2040;border:2px solid #2a5a9a;border-radius:14px;padding:10px 24px;color:#cde8ff;font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;transition:border-color .15s,background .15s;pointer-events:auto;}
+#open-modes-btn:hover{border-color:#5ac8fa;background:#142840;}
+#current-mode-label{font-family:'Segoe UI',sans-serif;font-size:11px;color:#5ac8fa;font-weight:700;}
+
+/* ══ EXIT BUTTON IN GAME ══ */
+#exit-btn{position:fixed;bottom:24px;right:14px;z-index:10;background:rgba(5,13,26,.8);border:1px solid #3a3a6a;border-radius:12px;padding:8px 14px;color:#ff7a5a;font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:800;cursor:pointer;display:none;pointer-events:auto;backdrop-filter:blur(8px);}
+#exit-btn:hover{background:rgba(40,10,10,.9);border-color:#aa3a3a;}
+
+/* ══ RESULT OVERLAY ══ */
+#result-overlay{position:fixed;inset:0;background:rgba(5,13,26,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:18;gap:16px;pointer-events:auto;}
+#result-overlay h2{font-family:'Segoe UI',sans-serif;font-size:28px;font-weight:900;color:#cde8ff;text-align:center;}
+#result-km-text{font-family:'Segoe UI',sans-serif;font-size:16px;color:#5ac8fa;text-align:center;}
+.result-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.result-actions button{border:none;border-radius:14px;padding:12px 28px;font-size:15px;font-weight:900;cursor:pointer;font-family:'Segoe UI',sans-serif;transition:transform .1s;}
+.result-actions button:active{transform:scale(.97);}
+#result-play-again{background:linear-gradient(135deg,#3a9fd8,#5ac8fa);color:#050d1a;}
+#result-exit{background:#0d2040;color:#ff7a5a;border:1px solid #3a3a6a !important;}
+
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
 #char-select-label{font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:800;color:#3a6a9a;letter-spacing:3px;text-transform:uppercase;}
 #char-select{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:480px;}
 .char-card{background:#0d2040;border:2px solid #1a3a6a;border-radius:13px;padding:10px 8px;width:98px;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;text-align:center;}
