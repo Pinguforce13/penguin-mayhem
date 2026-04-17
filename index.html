@@ -76,22 +76,10 @@
   <div id="overlay-penguin">🐧</div>
   <h1>PENGUIN MAYHEM<br><span id="overlay-sub">ICEBREAKERS</span></h1>
 
-  <!-- GAMEMODE SELECT -->
-  <div id="mode-select-label">Kies gamemode</div>
-  <div id="mode-select">
-    <div class="mode-btn selected" data-mode="showdown">
-      <div class="mode-icon">⚔️</div>
-      <div class="mode-name">Showdown</div>
-      <div class="mode-desc">Last Penguin Standing</div>
-      <div class="mode-mountain" id="mm-showdown">🏔️ Berg laden...</div>
-    </div>
-    <div class="mode-btn" data-mode="snowball">
-      <div class="mode-icon">❄️</div>
-      <div class="mode-name">Snowball Fight</div>
-      <div class="mode-desc">Kleur het terrein!</div>
-      <div class="mode-mountain" id="mm-snowball">🏔️ Berg laden...</div>
-    </div>
-  </div>
+  <!-- Current mode + change button -->
+  <button id="open-modes-btn">
+    🎮 Gamemodes &nbsp;|&nbsp; <span id="current-mode-label">⚔️ Showdown</span>
+  </button>
 
   <!-- CHARACTER SELECT -->
   <div id="char-select-label">Kies jouw class</div>
@@ -142,9 +130,46 @@
     </div>
   </div>
 
-  <div id="result-text"></div>
   <button id="play-btn">▶ SPEEL</button>
   <div id="kb-hint">WASD / pijltjes bewegen &nbsp;|&nbsp; SPATIE schieten &nbsp;|&nbsp; 📱 sleep 🔫 om te mikken</div>
+</div>
+
+<!-- GAMEMODE POPUP -->
+<div id="mode-popup">
+  <div id="mode-popup-box">
+    <h2>🎮 Kies Gamemode</h2>
+    <button class="mode-popup-btn active" data-mode="showdown">
+      <div class="mpb-icon">⚔️</div>
+      <div class="mpb-info">
+        <div class="mpb-name">Showdown</div>
+        <div class="mpb-desc">Last Penguin Standing • Ijs breekt af</div>
+        <div class="mpb-km" id="mpm-showdown">🏔️ Berg laden...</div>
+      </div>
+    </button>
+    <button class="mode-popup-btn" data-mode="snowball">
+      <div class="mpb-icon">❄️</div>
+      <div class="mpb-info">
+        <div class="mpb-name">Snowball Fight</div>
+        <div class="mpb-desc">Kleur het terrein met sneeuwballen!</div>
+        <div class="mpb-km" id="mpm-snowball">🏔️ Berg laden...</div>
+      </div>
+    </button>
+    <button id="mode-popup-close">Sluiten</button>
+  </div>
+</div>
+
+<!-- EXIT BUTTON (during game) -->
+<button id="exit-btn">🚪 Exit</button>
+
+<!-- RESULT OVERLAY (after game) -->
+<div id="result-overlay">
+  <div style="font-size:52px" id="result-emoji">🏆</div>
+  <h2 id="result-title">JIJ WINT!</h2>
+  <div id="result-km-text"></div>
+  <div class="result-actions">
+    <button id="result-play-again">▶ Opnieuw</button>
+    <button id="result-exit">🏠 Naar menu</button>
+  </div>
 </div>
 
 <script src="game.js"></script>
