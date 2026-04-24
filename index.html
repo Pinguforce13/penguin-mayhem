@@ -13,7 +13,7 @@
 <body>
 <canvas id="canvas"></canvas>
 
-<!-- AUTH -->
+<!-- ══ AUTH SCREEN ══ -->
 <div id="auth-screen">
   <div id="auth-box">
     <div id="auth-penguin">🐧</div>
@@ -27,7 +27,120 @@
   </div>
 </div>
 
-<!-- HUD -->
+<!-- ══ MAIN MENU (landscape layout) ══ -->
+<div id="main-menu">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div id="top-left">
+      <div id="user-badge">
+        <span id="user-avatar">🐧</span>
+        <div id="user-info">
+          <span id="user-name">gebruiker</span>
+          <span id="user-zone">⛺ Base Camp</span>
+        </div>
+      </div>
+    </div>
+    <div id="top-title">PENGUIN MAYHEM</div>
+    <div id="top-right">
+      <button class="top-btn" id="profile-btn">👤 Profiel</button>
+      <button class="top-btn disabled" id="friends-btn">👥 Friends</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="menu-content">
+
+    <!-- LEFT: Character list -->
+    <div id="char-column">
+      <div class="col-label">CHARACTER</div>
+      <div id="char-list">
+        <div class="char-card selected" data-cls="surfer">
+          <div class="cc-emoji">🏄</div>
+          <div class="cc-name" style="color:#5ac8fa">Surfer</div>
+          <div class="cc-km" id="ckm-surfer">0.0 km</div>
+        </div>
+        <div class="char-card" data-cls="soldier">
+          <div class="cc-emoji">🪖</div>
+          <div class="cc-name" style="color:#ff9a5a">Soldier</div>
+          <div class="cc-km" id="ckm-soldier">0.0 km</div>
+        </div>
+        <div class="char-card" data-cls="mage">
+          <div class="cc-emoji">🧊</div>
+          <div class="cc-name" style="color:#a080f8">Ice Mage</div>
+          <div class="cc-km" id="ckm-mage">0.0 km</div>
+        </div>
+        <div class="char-card" data-cls="tank">
+          <div class="cc-emoji">🛡️</div>
+          <div class="cc-name" style="color:#f0c040">Tank</div>
+          <div class="cc-km" id="ckm-tank">0.0 km</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Mountain -->
+    <div id="mountain-center">
+      <div id="mountain-wrap">
+        <canvas id="mountain-canvas" width="340" height="260"></canvas>
+        <div id="mountain-info">
+          <div id="mountain-zone-label">⛺ Base Camp</div>
+          <div id="mountain-km-label">0.0 km</div>
+          <div id="mountain-progress-wrap">
+            <div id="mountain-progress-bar">
+              <div id="mountain-progress-fill"></div>
+            </div>
+            <div id="mountain-progress-text">0 / 100 km</div>
+          </div>
+        </div>
+      </div>
+      <button id="play-btn">▶ SPEEL</button>
+      <div id="result-text"></div>
+    </div>
+
+    <!-- RIGHT: (empty for balance, profile panel goes here) -->
+    <div id="right-col">
+      <button class="top-btn" id="profile-btn-2" style="display:none">👤</button>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM: Gamemodes -->
+  <div id="bottom-bar">
+    <div class="col-label" id="mode-label-vert">GAMEMODES</div>
+    <div id="mode-list">
+      <div class="mode-card selected" data-mode="showdown">
+        <div class="mc-icon">⚔️</div>
+        <div class="mc-name">Showdown</div>
+        <div class="mc-km" id="mkm-showdown">0.0 km</div>
+      </div>
+      <div class="mode-card" data-mode="snowball">
+        <div class="mc-icon">❄️</div>
+        <div class="mc-name">Snowball</div>
+        <div class="mc-km" id="mkm-snowball">0.0 km</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ PROFILE PANEL ══ -->
+<div id="profile-panel">
+  <div id="profile-header">
+    <div id="profile-avatar">🐧</div>
+    <div>
+      <div id="profile-username">gebruiker</div>
+      <div id="profile-label">Jouw stats</div>
+    </div>
+    <button id="profile-close">✕</button>
+  </div>
+  <div class="panel-section-title">🏆 Wins per class</div>
+  <div id="profile-wins"></div>
+  <div class="panel-section-title">🏔️ Berg voortgang</div>
+  <div id="profile-mountains"></div>
+  <button id="auth-logout">🚪 Uitloggen</button>
+</div>
+
+<!-- ══ HUD (in-game) ══ -->
 <div id="hud">
   <div id="my-hp-wrap">
     <div id="my-hp-name">🏄 SURFER — JIJ</div>
@@ -38,7 +151,6 @@
   <div id="minimap-wrap"><canvas id="minimap" width="92" height="92"></canvas></div>
   <div id="ammo-wrap"><div id="ammo-lbl">Ammo</div><div id="ammo-dots"></div></div>
   <div id="bot-cards"></div>
-  <!-- Snowball mode score -->
   <div id="sb-score" style="display:none">
     <div id="sb-blue-score">🔵 0%</div>
     <div id="sb-red-score">🔴 0%</div>
@@ -47,121 +159,14 @@
   <div id="pickup-msg"></div>
 </div>
 
-<!-- MOBILE -->
+<!-- MOBILE CONTROLS -->
 <div id="joystick-area"><div id="joystick-base"></div><div id="joystick-knob"></div></div>
 <div id="shoot-btn">🔫</div>
 
-<!-- PROFILE BUTTON -->
-<button id="profile-btn"><span>👤</span><span id="profile-btn-label"></span></button>
-
-<!-- PROFILE PANEL -->
-<div id="profile-panel">
-  <div id="profile-header">
-    <div id="profile-avatar">🐧</div>
-    <div>
-      <div id="profile-username">gebruiker</div>
-      <div id="profile-label">Jouw stats</div>
-    </div>
-    <button id="profile-close">✕</button>
-  </div>
-  <div id="profile-wins-title">🏆 Wins per class</div>
-  <div id="profile-wins"></div>
-  <div id="profile-mountains-title">🏔️ Berg voortgang</div>
-  <div id="profile-mountains"></div>
-  <button id="auth-logout">🚪 Uitloggen</button>
-</div>
-
-<!-- MAIN MENU -->
-<div id="overlay">
-  <div id="overlay-penguin">🐧</div>
-  <h1>PENGUIN MAYHEM<br><span id="overlay-sub">ICEBREAKERS</span></h1>
-
-  <!-- Current mode + change button -->
-  <button id="open-modes-btn">
-    🎮 Gamemodes &nbsp;|&nbsp; <span id="current-mode-label">⚔️ Showdown</span>
-  </button>
-
-  <!-- CHARACTER SELECT -->
-  <div id="char-select-label">Kies jouw class</div>
-  <div id="char-select">
-    <div class="char-card selected" data-cls="surfer">
-      <div class="char-emoji">🏄</div>
-      <div class="char-name" style="color:#5ac8fa">Surfer</div>
-      <div class="char-stats">
-        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:55%;background:#5ac8fa"></div></div></div>
-        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:90%;background:#5ac8fa"></div></div></div>
-        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:50%;background:#5ac8fa"></div></div></div>
-      </div>
-      <div class="char-desc">Super snel • 6 ammo</div>
-      <div class="char-km" id="ckm-surfer">— km</div>
-    </div>
-    <div class="char-card" data-cls="soldier">
-      <div class="char-emoji">🪖</div>
-      <div class="char-name" style="color:#ff9a5a">Soldier</div>
-      <div class="char-stats">
-        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
-        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:65%;background:#ff9a5a"></div></div></div>
-        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:75%;background:#ff9a5a"></div></div></div>
-      </div>
-      <div class="char-desc">Dubbel schot • 8 ammo</div>
-      <div class="char-km" id="ckm-soldier">— km</div>
-    </div>
-    <div class="char-card" data-cls="mage">
-      <div class="char-emoji">🧊</div>
-      <div class="char-name" style="color:#a080f8">Ice Mage</div>
-      <div class="char-stats">
-        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:40%;background:#a080f8"></div></div></div>
-        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:50%;background:#a080f8"></div></div></div>
-        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:95%;background:#a080f8"></div></div></div>
-      </div>
-      <div class="char-desc">Bevriest • 4 ammo</div>
-      <div class="char-km" id="ckm-mage">— km</div>
-    </div>
-    <div class="char-card" data-cls="tank">
-      <div class="char-emoji">🛡️</div>
-      <div class="char-name" style="color:#f0c040">Tank</div>
-      <div class="char-stats">
-        <div class="cstat"><span>❤️</span><div class="cbar"><div style="width:99%;background:#f0c040"></div></div></div>
-        <div class="cstat"><span>⚡</span><div class="cbar"><div style="width:30%;background:#f0c040"></div></div></div>
-        <div class="cstat"><span>🔫</span><div class="cbar"><div style="width:70%;background:#f0c040"></div></div></div>
-      </div>
-      <div class="char-desc">Veel HP • 3 ammo</div>
-      <div class="char-km" id="ckm-tank">— km</div>
-    </div>
-  </div>
-
-  <button id="play-btn">▶ SPEEL</button>
-  <div id="kb-hint">WASD / pijltjes bewegen &nbsp;|&nbsp; SPATIE schieten &nbsp;|&nbsp; 📱 sleep 🔫 om te mikken</div>
-</div>
-
-<!-- GAMEMODE POPUP -->
-<div id="mode-popup">
-  <div id="mode-popup-box">
-    <h2>🎮 Kies Gamemode</h2>
-    <button class="mode-popup-btn active" data-mode="showdown">
-      <div class="mpb-icon">⚔️</div>
-      <div class="mpb-info">
-        <div class="mpb-name">Showdown</div>
-        <div class="mpb-desc">Last Penguin Standing • Ijs breekt af</div>
-        <div class="mpb-km" id="mpm-showdown">🏔️ Berg laden...</div>
-      </div>
-    </button>
-    <button class="mode-popup-btn" data-mode="snowball">
-      <div class="mpb-icon">❄️</div>
-      <div class="mpb-info">
-        <div class="mpb-name">Snowball Fight</div>
-        <div class="mpb-desc">Kleur het terrein met sneeuwballen!</div>
-        <div class="mpb-km" id="mpm-snowball">🏔️ Berg laden...</div>
-      </div>
-    </button>
-    <button id="mode-popup-close">Sluiten</button>
-  </div>
-</div>
-
-<!-- EXIT BUTTON (during game) -->
+<!-- EXIT BUTTON -->
 <button id="exit-btn">🚪 Exit</button>
 
-<!-- RESULT OVERLAY (after game) -->
+<!-- RESULT OVERLAY -->
 <div id="result-overlay">
   <div style="font-size:52px" id="result-emoji">🏆</div>
   <h2 id="result-title">JIJ WINT!</h2>
@@ -172,6 +177,198 @@
   </div>
 </div>
 
+<!-- GAMEMODE POPUP (kept for JS compatibility) -->
+<div id="mode-popup" style="display:none">
+  <div id="mode-popup-box">
+    <h2>Gamemodes</h2>
+    <button class="mode-popup-btn active" data-mode="showdown"><div class="mpb-icon">⚔️</div><div class="mpb-info"><div class="mpb-name">Showdown</div><div class="mpb-km" id="mpm-showdown"></div></div></button>
+    <button class="mode-popup-btn" data-mode="snowball"><div class="mpb-icon">❄️</div><div class="mpb-info"><div class="mpb-name">Snowball</div><div class="mpb-km" id="mpm-snowball"></div></div></button>
+    <button id="mode-popup-close">Sluiten</button>
+  </div>
+</div>
+
 <script src="game.js"></script>
+<script>
+// ── Mountain canvas drawing
+function drawMountainCanvas(){
+  const c=document.getElementById('mountain-canvas');
+  if(!c)return;
+  const cx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  cx.clearRect(0,0,W,H);
+
+  // Sky gradient
+  const sky=cx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#050d1a');
+  sky.addColorStop(1,'#0d2a4a');
+  cx.fillStyle=sky;cx.fillRect(0,0,W,H);
+
+  // Stars
+  cx.fillStyle='rgba(255,255,255,.6)';
+  for(let i=0;i<30;i++){
+    cx.beginPath();
+    cx.arc((i*137)%W,(i*89)%(H*.5),i%4===0?1.5:1,0,Math.PI*2);
+    cx.fill();
+  }
+
+  // Get current km for selected mode+char
+  const km = typeof getMountainKmPerChar==='function'
+    ? getMountainKmPerChar(window.selectedMode||'showdown', window.selectedClass||'surfer')
+    : 0;
+  const maxKm=100;
+  const pct=Math.min(1,km/maxKm);
+
+  // Mountain silhouette
+  cx.fillStyle='#1a3a6a';
+  cx.beginPath();
+  cx.moveTo(0,H);
+  cx.lineTo(W*.15,H*.7);
+  cx.lineTo(W*.35,H*.85);
+  cx.lineTo(W*.5,H*.1);   // peak
+  cx.lineTo(W*.65,H*.8);
+  cx.lineTo(W*.85,H*.65);
+  cx.lineTo(W,H);
+  cx.closePath();cx.fill();
+
+  // Snow cap
+  cx.fillStyle='#d0e8ff';
+  cx.beginPath();
+  cx.moveTo(W*.42,H*.28);
+  cx.lineTo(W*.5,H*.1);
+  cx.lineTo(W*.58,H*.28);
+  cx.closePath();cx.fill();
+
+  // Progress line on mountain
+  // The flag moves up the mountain based on km
+  const flagX=W*.5+(Math.sin(pct*Math.PI))*W*.08;
+  const flagY=H*.1+(1-pct)*(H*.7-H*.1);
+
+  // Draw path line
+  cx.strokeStyle='rgba(255,200,60,.6)';
+  cx.lineWidth=2;
+  cx.setLineDash([4,4]);
+  cx.beginPath();
+  cx.moveTo(W*.3,H*.75);
+  cx.bezierCurveTo(W*.35,H*.5,W*.45,H*.35,flagX,flagY);
+  cx.stroke();
+  cx.setLineDash([]);
+
+  // Zone color bands
+  const zones=[
+    {name:'Base Camp',  col:'rgba(60,180,100,.15)', min:0,   max:.1},
+    {name:'Snow Trail', col:'rgba(70,160,200,.15)', min:.1,  max:.25},
+    {name:'Ice Ridge',  col:'rgba(80,160,220,.15)', min:.25, max:.5},
+    {name:'Blizzard',   col:'rgba(100,180,240,.15)',min:.5,  max:.75},
+    {name:'Summit',     col:'rgba(180,220,255,.2)', min:.75, max:1},
+  ];
+
+  // Flag (current position)
+  cx.save();
+  cx.translate(flagX,flagY);
+  // Pole
+  cx.fillStyle='#ffffff';
+  cx.fillRect(-1,-18,2,18);
+  // Flag
+  cx.fillStyle=km>=100?'#f0c040':'#ff4444';
+  cx.beginPath();
+  cx.moveTo(0,-18);cx.lineTo(12,-13);cx.lineTo(0,-8);
+  cx.closePath();cx.fill();
+  // Glow if at summit
+  if(km>=100){cx.shadowColor='#f0c040';cx.shadowBlur=12;}
+  cx.restore();
+
+  // "CURRENT HEIGHT" label in center
+  cx.fillStyle='rgba(255,255,255,.08)';
+  cx.font='bold 11px Segoe UI';
+  cx.textAlign='center';
+  cx.fillText(`${km.toFixed(1)} km`,W*.5,H*.55);
+}
+
+// Redraw mountain every second
+setInterval(drawMountainCanvas,1000);
+drawMountainCanvas();
+
+// Update mountain canvas when selection changes
+const origUpdateChar=window.updateCharKmDisplay;
+window.updateCharKmDisplay=function(){
+  if(origUpdateChar)origUpdateChar();
+  drawMountainCanvas();
+  updateBottomModeKm();
+  updateTopUserBadge();
+};
+
+function updateBottomModeKm(){
+  ['showdown','snowball'].forEach(mode=>{
+    const el=document.getElementById('mkm-'+mode);
+    if(!el)return;
+    const km=typeof getMountainKm==='function'?getMountainKm(mode):0;
+    const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp'};
+    el.textContent=`${zone.icon} ${km.toFixed(1)} km`;
+  });
+  // Update mountain center info
+  const cls=window.selectedClass||'surfer';
+  const mode=window.selectedMode||'showdown';
+  const km=typeof getMountainKmPerChar==='function'?getMountainKmPerChar(mode,cls):0;
+  const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp',min:0,max:10};
+  const zoneMax=zone.max===999?km+50:zone.max;
+  const inZonePct=Math.min(100,Math.max(0,((km-zone.min)/(zoneMax-zone.min))*100));
+  if(document.getElementById('mountain-zone-label'))
+    document.getElementById('mountain-zone-label').textContent=`${zone.icon} ${zone.name}`;
+  if(document.getElementById('mountain-km-label'))
+    document.getElementById('mountain-km-label').textContent=`${km.toFixed(1)} km`;
+  if(document.getElementById('mountain-progress-fill'))
+    document.getElementById('mountain-progress-fill').style.width=inZonePct+'%';
+  if(document.getElementById('mountain-progress-text'))
+    document.getElementById('mountain-progress-text').textContent=`${km.toFixed(1)} / 100 km`;
+}
+
+function updateTopUserBadge(){
+  if(!window.currentUser)return;
+  const mode=window.selectedMode||'showdown';
+  const cls=window.selectedClass||'surfer';
+  const km=typeof getMountainKmPerChar==='function'?getMountainKmPerChar(mode,cls):0;
+  const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp'};
+  const el=document.getElementById('user-zone');
+  if(el)el.textContent=`${zone.icon} ${zone.name}`;
+  const nameEl=document.getElementById('user-name');
+  if(nameEl&&window.currentUser)nameEl.textContent=window.currentUser.username;
+}
+
+// ── Character cards in new menu
+document.querySelectorAll('.char-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    window.selectedClass=card.dataset.cls;
+    if(typeof updateCharKmDisplay==='function')updateCharKmDisplay();
+    drawMountainCanvas();
+  });
+});
+
+// ── Mode cards in bottom bar
+document.querySelectorAll('.mode-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    window.selectedMode=card.dataset.mode;
+    if(typeof updateCharKmDisplay==='function')updateCharKmDisplay();
+    drawMountainCanvas();
+    updateBottomModeKm();
+    // Sync with game.js selectedMode
+    const lbl=document.getElementById('current-mode-label');
+    if(lbl){const names={showdown:'⚔️ Showdown',snowball:'❄️ Snowball'};lbl.textContent=names[window.selectedMode];}
+  });
+});
+
+// Profile buttons
+document.getElementById('profile-btn').addEventListener('click',()=>{
+  const p=document.getElementById('profile-panel');
+  p.style.display=p.style.display==='flex'?'none':'flex';
+  if(typeof updateProfileMountains==='function')updateProfileMountains();
+});
+document.getElementById('profile-close').addEventListener('click',()=>{
+  document.getElementById('profile-panel').style.display='none';
+});
+</script>
 </body>
 </html>
