@@ -149,13 +149,11 @@ function updateProfileMountains(){
   }).join('');
 }
 
-// ══ SELECTIONS ══
-let selectedClass='surfer';
-let selectedMode='showdown';
-window.selectedClass='surfer';
-window.selectedMode='showdown';
-window._selCls='surfer';
-window._selMode='showdown';
+// ══ SELECTIONS — always read from window so menu buttons sync ══
+window._selCls  = window._selCls  || 'surfer';
+window._selMode = window._selMode || 'showdown';
+Object.defineProperty(window,'selectedClass',{get:()=>window._selCls, set:v=>{window._selCls=v;}});
+Object.defineProperty(window,'selectedMode', {get:()=>window._selMode,set:v=>{window._selMode=v;}});
 
 function refreshMenu(){
   if(typeof drawMtn==='function')drawMtn();
@@ -248,6 +246,118 @@ let parts=[];
 function hitFx(wx,wy,col,n=5){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;parts.push({wx,wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:10+Math.random()*8,ml:18,sz:2+Math.random()*3,col});}}
 function deathFx(wx,wy,col){for(let i=0;i<18;i++)parts.push({wx:wx+(Math.random()-.5)*20,wy:wy+(Math.random()-.5)*20,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:20+Math.random()*18,ml:38,sz:3+Math.random()*6,col});}
 
+// ══ FISHING SYSTEM ══
+let fishHoles=[],crates=[],drops=[],inventory={rod:null,fish:0};
+let fishState={active:false,timer:0,hooked:false,holeRef:null};
+let eatTimer=0;
+
+function initFishing(){
+  fishHoles=[];crates=[];drops=[];inventory={rod:null,fish:0};
+  fishState={active:false,timer:0,hooked:false,holeRef:null};eatTimer=0;
+  // Place 6 fishing holes on floor tiles
+  const candidates=[];
+  for(let r=6;r<GR-6;r++)for(let c=6;c<GC-6;c++){
+    if(grid[r][c]!==T_WALL&&iceHP[r][c]>0){
+      const near=[{r:4,c:4},{r:4,c:45},{r:45,c:4},{r:45,c:45},{r:24,c:24}];
+      if(near.every(s=>Math.abs(s.r-r)+Math.abs(s.c-c)>5))candidates.push({r,c});
+    }
+  }
+  for(let i=0;i<6&&candidates.length;i++){
+    const idx=Math.floor(Math.random()*candidates.length);
+    const{r,c}=candidates.splice(idx,1)[0];
+    candidates.splice(0,candidates.length,...candidates.filter(x=>Math.abs(x.r-r)+Math.abs(x.c-c)>5));
+    const hole={r,c,wx:(c+.5)*TILE,wy:(r+.5)*TILE};
+    fishHoles.push(hole);
+    // 2 crates next to hole
+    const offsets=[{dx:-TILE,dy:0},{dx:TILE,dy:0},{dx:0,dy:-TILE},{dx:0,dy:TILE}];
+    let placed=0;
+    for(const{dx,dy}of offsets){
+      if(placed>=2)break;
+      const cr=Math.floor((hole.wy+dy)/TILE),cc=Math.floor((hole.wx+dx)/TILE);
+      if(cr>0&&cr<GR-1&&cc>0&&cc<GC-1&&grid[cr][cc]!==T_WALL){
+        crates.push({wx:hole.wx+dx,wy:hole.wy+dy,hp:50,mhp:50,alive:true,hole});placed++;
+      }
+    }
+  }
+  renderInv();
+}
+
+function updateFishing(){
+  // Crate bullet hits
+  for(const cr of crates){
+    if(!cr.alive)continue;
+    for(const b of bullets){
+      if(!b.life)continue;
+      const dx=cr.wx-b.wx,dy=cr.wy-b.wy;
+      if(Math.sqrt(dx*dx+dy*dy)<TILE*.42){cr.hp-=b.dmg;hitFx(b.wx,b.wy,'#c8a060',4);b.life=0;
+        if(cr.hp<=0){cr.alive=false;drops.push({type:'rod',wx:cr.wx,wy:cr.wy,life:900});hitFx(cr.wx,cr.wy,'#c8a060',12);}
+      }
+    }
+  }
+  // Drop pickup
+  drops=drops.filter(d=>d.life>0);
+  drops.forEach(d=>d.life--);
+  const me=players[0];
+  if(me&&me.alive){
+    for(let i=drops.length-1;i>=0;i--){
+      const d=drops[i];
+      const dx=me.wx-d.wx,dy=me.wy-d.wy;
+      if(Math.sqrt(dx*dx+dy*dy)<PR+18){
+        if(d.type==='rod'&&!inventory.rod){inventory.rod={hp:20,mhp:20};drops.splice(i,1);showMsg('🎣 Vishengel opgepakt!');}
+        else if(d.type==='fish'){inventory.fish++;drops.splice(i,1);showMsg('🐟 Vis! Klik om te eten (+10 HP)');}
+        renderInv();
+      }
+    }
+  }
+  // Eating
+  if(eatTimer>0){eatTimer--;if(eatTimer===0){inventory.fish--;const me=players[0];if(me&&me.alive)me.hp=Math.min(me.mhp,me.hp+10);showMsg('🐟 +10 HP!');renderInv();}}
+  // Fishing timer
+  if(fishState.active){
+    fishState.timer--;
+    if(!fishState.hooked&&fishState.timer<120&&Math.random()<.025){fishState.hooked=true;fishState.timer=90;showMsg('🐟 BEET! Klik op 🎣!');}
+    if(fishState.timer<=0){fishState.active=false;showMsg(fishState.hooked?'😢 Vis ontsnapt!':'🎣 Niets gevangen...');renderInv();}
+  }
+}
+
+window.useRod=function(){
+  if(!inventory.rod||fishState.active)return;
+  const me=players[0];if(!me||!me.alive)return;
+  let near=null,nd=Infinity;
+  for(const h of fishHoles){const dx=h.wx-me.wx,dy=h.wy-me.wy,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;near=h;}}
+  if(!near||nd>TILE*4){showMsg('🎣 Te ver van een visputje!');return;}
+  fishState={active:true,timer:180,hooked:false,holeRef:near};
+  showMsg('🎣 Uitgegooid! Wacht...');renderInv();
+};
+window.eatFish=function(){
+  if(!inventory.fish||eatTimer>0)return;
+  eatTimer=120;showMsg('🐟 Aan het eten...');
+};
+
+// Click = reel in when hooked
+document.addEventListener('click',()=>{
+  if(fishState.active&&fishState.hooked){
+    drops.push({type:'fish',wx:fishState.holeRef.wx,wy:fishState.holeRef.wy,life:600});
+    inventory.rod.hp-=10;
+    if(inventory.rod.hp<=0){inventory.rod=null;showMsg('🎣 Vishengel kapot!');}
+    else showMsg('🐟 Gevangen! Raap op.');
+    fishState.active=false;renderInv();
+  }
+});
+
+function showMsg(msg){
+  const el=document.getElementById('pickup-msg');
+  if(!el)return;
+  el.textContent=msg;el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',2500);
+}
+function renderInv(){
+  const wrap=document.getElementById('inventory-bar');if(!wrap)return;
+  let html='';
+  if(inventory.rod){const pct=Math.round(inventory.rod.hp/inventory.rod.mhp*100);html+=`<div class="inv-slot${fishState.active?' active':''}" onclick="useRod()"><div class="inv-icon">🎣</div><div class="inv-label">${inventory.rod.hp}/${inventory.rod.mhp}</div></div>`;}
+  if(inventory.fish>0){html+=`<div class="inv-slot" onclick="eatFish()"><div class="inv-icon">🐟</div><div class="inv-label">${inventory.fish}x${eatTimer>0?' ⏳':''}</div></div>`;}
+  wrap.innerHTML=html;
+}
+
 // CLASSES
 const CLS_DEF={
   surfer: {col:'#5ac8fa',hp:85, spd:2.2,fr:28,maxA:6,relT:120,dmg:14,bspd:7,name:'Surfer'},
@@ -322,7 +432,7 @@ function update(ts){
   const me=players[0];
   if(me&&me.alive){camX+=(me.wx-SW/2-camX)*CAM_LERP;camY+=(me.wy-SH/2-camY)*CAM_LERP;camX=Math.max(0,Math.min(GC*TILE-SW,camX));camY=Math.max(0,Math.min(GR*TILE-SH,camY));}
 
-  updateBullets();updateIce();updateSB();
+  updateBullets();updateIce();updateSB();updateFishing();
   for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;if(p.g)p.vy+=p.g;else{p.vx*=.91;p.vy*=.91;}p.life--;}
   parts=parts.filter(p=>p.life>0);
   updateHUD();
@@ -440,6 +550,60 @@ function draw(){
   if(me&&me.alive&&aimState.active&&aimState.ready){const{x:px,y:py}=toScreen(me.wx,me.wy);ctx.save();ctx.strokeStyle=me.col;ctx.lineWidth=2;ctx.globalAlpha=.5;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(me.angle)*100,py+Math.sin(me.angle)*100);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
 
   for(const p of players)if(p.alive)drawP(p);
+
+  // Fishing holes
+  for(const h of fishHoles){
+    const{x,y}=toScreen(h.wx-TILE/2,h.wy-TILE/2);
+    if(x<-TILE||x>SW+TILE||y<-TILE||y>SH+TILE)continue;
+    const wt2=Date.now()*.0012;
+    ctx.fillStyle='#4ab8e8';ctx.beginPath();ctx.ellipse(x+TILE/2,y+TILE/2,TILE*.42,TILE*.3,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(120,210,255,${.3+Math.sin(wt2+h.r*.7)*.15})`;ctx.beginPath();ctx.ellipse(x+TILE/2,y+TILE/2-4,TILE*.22,TILE*.1,0,0,Math.PI*2);ctx.fill();
+    ctx.font='14px serif';ctx.textAlign='center';ctx.fillText('🐟',x+TILE/2,y+TILE/2+5);
+  }
+  // Crates
+  for(const cr of crates){
+    if(!cr.alive)continue;
+    const{x,y}=toScreen(cr.wx-TILE*.33,cr.wy-TILE*.33);
+    const sz=Math.floor(TILE*.66);
+    ctx.fillStyle='#8b6040';ctx.fillRect(x,y,sz,sz);
+    ctx.fillStyle='#a07848';ctx.fillRect(x+2,y+2,sz-4,sz*.45);
+    ctx.strokeStyle='#5a3820';ctx.lineWidth=1.5;ctx.strokeRect(x,y,sz,sz);
+    ctx.beginPath();ctx.moveTo(x,y+sz*.5);ctx.lineTo(x+sz,y+sz*.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+sz*.33,y);ctx.lineTo(x+sz*.33,y+sz);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+sz*.67,y);ctx.lineTo(x+sz*.67,y+sz);ctx.stroke();
+    const hpPct=cr.hp/cr.mhp;
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(x,y-7,sz,4);
+    ctx.fillStyle=hpPct>.5?'#3ad870':'#f0c040';ctx.fillRect(x,y-7,sz*hpPct,4);
+  }
+  // Drops
+  for(const d of drops){
+    const{x,y}=toScreen(d.wx,d.wy);
+    if(x<-20||x>SW+20||y<-20||y>SH+20)continue;
+    const pulse=.85+Math.sin(Date.now()*.006)*.15;
+    ctx.save();ctx.globalAlpha=Math.min(1,d.life/60)*pulse;
+    ctx.shadowColor=d.type==='rod'?'#f0c040':'#5ac8fa';ctx.shadowBlur=10;
+    ctx.fillStyle=d.type==='rod'?'rgba(240,192,60,.8)':'rgba(60,160,220,.8)';
+    ctx.fillRect(x-11,y-11,22,22);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.strokeRect(x-11,y-11,22,22);
+    ctx.shadowBlur=0;ctx.font='15px serif';ctx.textAlign='center';
+    ctx.fillText(d.type==='rod'?'🎣':'🐟',x,y+6);
+    ctx.restore();
+  }
+  // Fishing line
+  const meP=players[0];
+  if(meP&&meP.alive&&fishState.active&&fishState.holeRef){
+    const{x:mx,y:my}=toScreen(meP.wx,meP.wy);
+    const{x:fx,y:fy}=toScreen(fishState.holeRef.wx,fishState.holeRef.wy);
+    ctx.save();
+    ctx.strokeStyle=fishState.hooked?'#f0c040':'#c8a060';ctx.lineWidth=fishState.hooked?2.5:1.5;
+    ctx.setLineDash(fishState.hooked?[]:[4,4]);
+    ctx.beginPath();ctx.moveTo(mx,my);
+    const mx2=(mx+fx)/2,my2=Math.min(my,fy)-28;
+    ctx.quadraticCurveTo(mx2,my2,fx,fy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=fishState.hooked?'#f04040':'#f0f040';
+    ctx.shadowColor=fishState.hooked?'#ff0000':'#ffff00';ctx.shadowBlur=fishState.hooked?10:4;
+    ctx.beginPath();ctx.arc(fx,fy,5,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawP(p){
@@ -536,7 +700,7 @@ document.getElementById('btn-play').addEventListener('click',()=>{
   document.getElementById('btn-exit').style.display='block';
   document.getElementById('result-screen').style.display='none';
   if(isMob){document.getElementById('joystick-wrap').style.display='block';document.getElementById('shoot-btn').style.display='flex';}
-  initGrid();spawnAll();initIce();
+  initGrid();spawnAll();initIce();initFishing();
   if(selectedMode==='snowball')initSB();
   const me=players[0];camX=me.wx-SW/2;camY=me.wy-SH/2;
   renderAmmo(me);running=true;
