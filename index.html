@@ -4,371 +4,437 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#050d1a">
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css">
 <title>Penguin Mayhem</title>
+<style>
+/* BASE */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; background:#050d1a; font-family:'Segoe UI',sans-serif; overflow:hidden; }
+canvas { display:block; position:fixed; top:0; left:0; z-index:0; }
+
+/* SCREENS */
+.screen { position:fixed; inset:0; z-index:10; display:none; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ── AUTH ── */
+#auth-screen { align-items:center; justify-content:center; background:rgba(5,13,26,.97); }
+#auth-box { background:#0d2040; border:1px solid #1a3a6a; border-radius:20px; padding:28px 24px; width:300px; max-width:92vw; display:flex; flex-direction:column; gap:12px; align-items:center; }
+.auth-penguin { font-size:48px; }
+.auth-title { font-size:20px; font-weight:900; color:#cde8ff; letter-spacing:2px; }
+.auth-sub { font-size:12px; color:#3a6a9a; text-align:center; }
+#auth-screen select, #auth-screen input { width:100%; padding:11px 13px; border-radius:10px; background:#0a1830; border:1px solid #1a3a6a; color:#cde8ff; font-size:14px; font-family:inherit; outline:none; }
+#auth-screen select:focus, #auth-screen input:focus { border-color:#3a7aaa; }
+#auth-error { font-size:12px; color:#ff7a5a; min-height:16px; text-align:center; }
+#btn-auth { width:100%; background:linear-gradient(135deg,#3a9fd8,#5ac8fa); color:#050d1a; border:none; border-radius:12px; padding:13px; font-size:15px; font-weight:900; cursor:pointer; }
+#btn-auth:active { opacity:.85; }
+
+/* ── MENU ── */
+#menu-screen { background:linear-gradient(160deg,#050d1a,#0a1e36,#061428); overflow:hidden; }
+
+/* Top bar */
+#menu-top { display:flex; align-items:center; height:52px; padding:0 14px; gap:10px; border-bottom:1px solid rgba(30,70,120,.4); flex-shrink:0; }
+#user-badge { display:flex; align-items:center; gap:8px; background:rgba(10,30,60,.7); border:1px solid #1a3a6a; border-radius:10px; padding:5px 10px; cursor:pointer; }
+#user-badge:active { opacity:.8; }
+#user-av { font-size:18px; }
+#user-name { font-size:12px; font-weight:800; color:#cde8ff; }
+#user-zone { font-size:10px; color:#5ac8fa; }
+#menu-title { flex:1; text-align:center; font-size:clamp(13px,3vw,20px); font-weight:900; color:#cde8ff; letter-spacing:2px; }
+#btn-profile { background:rgba(10,30,60,.7); border:1px solid #2a5a9a; border-radius:10px; padding:6px 12px; color:#cde8ff; font-size:12px; font-weight:700; cursor:pointer; }
+#btn-profile:active { opacity:.8; }
+
+/* Middle layout */
+#menu-mid { display:flex; flex:1; min-height:0; }
+
+/* Character column */
+#char-col { width:100px; flex-shrink:0; display:flex; flex-direction:column; gap:5px; padding:8px 5px; overflow-y:auto; border-right:1px solid rgba(30,70,120,.3); }
+#char-col::-webkit-scrollbar { display:none; }
+.col-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; text-align:center; padding-bottom:2px; }
+.char-btn { background:rgba(10,28,55,.7); border:2px solid #1a3a6a; border-radius:10px; padding:7px 5px; cursor:pointer; text-align:center; }
+.char-btn:active { opacity:.8; }
+.char-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); }
+.cb-emoji { font-size:20px; }
+.cb-name { font-size:9px; font-weight:800; margin:2px 0; }
+.cb-km { font-size:9px; color:#4a8aaa; }
+.char-btn.sel .cb-km { color:#f0c040; }
+
+/* Mountain center */
+#mountain-mid { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:8px; }
+#mtn-canvas { border-radius:10px; border:1px solid rgba(30,70,120,.3); max-width:100%; }
+#mtn-info { text-align:center; }
+#mtn-zone { font-size:13px; font-weight:800; color:#cde8ff; }
+#mtn-km { font-size:20px; font-weight:900; color:#5ac8fa; }
+#mtn-bar-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; margin-top:4px; }
+#mtn-bar-bg { width:180px; height:6px; background:rgba(10,24,40,.8); border-radius:3px; overflow:hidden; border:1px solid #1a3a6a; }
+#mtn-bar-fill { height:100%; background:linear-gradient(90deg,#3a9fd8,#5ac8fa); border-radius:3px; width:0%; transition:width .4s; }
+#mtn-bar-txt { font-size:10px; color:#3a6a9a; }
+#btn-play { background:linear-gradient(135deg,#3a9fd8,#5ac8fa); color:#050d1a; border:none; border-radius:14px; padding:13px 44px; font-size:17px; font-weight:900; cursor:pointer; box-shadow:0 4px 18px rgba(90,200,250,.3); margin-top:4px; }
+#btn-play:active { opacity:.85; }
+
+/* Mode bottom */
+#mode-bar { display:flex; align-items:center; gap:8px; padding:8px 10px; border-top:1px solid rgba(30,70,120,.3); flex-shrink:0; height:82px; }
+#mode-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+#mode-list { display:flex; gap:8px; overflow-x:auto; flex:1; }
+#mode-list::-webkit-scrollbar { display:none; }
+.mode-btn { background:rgba(10,28,55,.7); border:2px solid #1a3a6a; border-radius:10px; padding:7px 14px; cursor:pointer; text-align:center; flex-shrink:0; min-width:90px; }
+.mode-btn:active { opacity:.8; }
+.mode-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); }
+.mb-icon { font-size:18px; }
+.mb-name { font-size:10px; font-weight:800; color:#cde8ff; }
+.mb-km { font-size:9px; color:#4a8aaa; }
+.mode-btn.sel .mb-km { color:#f0c040; }
+
+/* ── PROFILE PANEL ── */
+#profile-panel { position:fixed; top:58px; right:10px; z-index:30; background:#0d2040; border:1px solid #1a3a6a; border-radius:14px; padding:16px; width:230px; display:none; flex-direction:column; gap:10px; max-height:80vh; overflow-y:auto; }
+#pp-header { display:flex; align-items:center; gap:8px; }
+#pp-av { font-size:26px; }
+#pp-name { font-size:13px; font-weight:800; color:#cde8ff; }
+#pp-sub { font-size:10px; color:#3a6a9a; }
+#btn-close-pp { margin-left:auto; background:none; border:none; color:#3a6a9a; font-size:16px; cursor:pointer; }
+.pp-section { font-size:10px; font-weight:800; color:#3a6a9a; letter-spacing:1px; text-transform:uppercase; }
+.pp-win-row { display:flex; align-items:center; gap:6px; font-size:12px; }
+.pp-win-ic { width:18px; }
+.pp-win-nm { flex:1; color:#8ab4d4; }
+.pp-win-ct { font-weight:800; color:#5ac8fa; }
+.pp-mtn { background:#0a1830; border:1px solid #1a3060; border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:3px; }
+.pp-mtn-hd { display:flex; align-items:center; gap:5px; font-size:10px; }
+.pp-mtn-mode { color:#3a6a9a; text-transform:uppercase; letter-spacing:1px; flex:1; }
+.pp-mtn-zone { font-weight:800; font-size:10px; }
+.pp-mtn-km { color:#5ac8fa; margin-left:auto; font-size:10px; }
+.pp-bar-bg { height:4px; background:#060e1e; border-radius:2px; overflow:hidden; }
+.pp-bar-fill { height:100%; border-radius:2px; }
+#btn-logout { background:#0a1830; border:1px solid #1a3a6a; color:#ff7a5a; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; }
+#btn-logout:active { opacity:.8; }
+
+/* ── GAME HUD ── */
+#hud { position:fixed; inset:0; z-index:5; pointer-events:none; display:none; }
+#hud-hp-wrap { position:absolute; top:12px; left:12px; display:flex; flex-direction:column; gap:3px; }
+#hud-hp-name { font-size:11px; font-weight:800; color:#5ac8fa; letter-spacing:1px; }
+#hud-hp-bg { width:150px; height:11px; background:rgba(10,24,40,.85); border-radius:5px; border:1px solid #1a3a6a; overflow:hidden; }
+#hud-hp-fill { height:100%; width:100%; background:linear-gradient(90deg,#3ad870,#5ac8fa); border-radius:5px; transition:width .12s,background .3s; }
+#hud-hp-txt { font-size:10px; color:#5a84a8; }
+#hud-alive { position:absolute; top:12px; left:50%; transform:translateX(-50%); text-align:center; background:rgba(5,13,26,.8); border:1px solid #1a3a6a; border-radius:10px; padding:4px 14px; }
+#hud-alive-n { font-size:20px; font-weight:900; color:#cde8ff; line-height:1; }
+#hud-alive-l { font-size:9px; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; }
+#hud-minimap { position:absolute; top:12px; right:12px; background:rgba(5,13,26,.85); border:1px solid #1a3a6a; border-radius:8px; padding:3px; }
+#minimap { display:block; border-radius:6px; }
+#hud-ammo { position:absolute; bottom:22px; left:12px; display:flex; flex-direction:column; gap:4px; }
+#hud-ammo-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:1px; text-transform:uppercase; }
+#hud-ammo-dots { display:flex; gap:4px; flex-wrap:wrap; max-width:120px; }
+.ammo-dot { width:11px; height:11px; border-radius:50%; background:#5ac8fa; box-shadow:0 0 5px rgba(90,200,250,.5); }
+.ammo-dot.empty { background:#1a3050; box-shadow:none; }
+.ammo-dot.reload { background:#1a3050; box-shadow:none; }
+#hud-bots { position:absolute; top:60px; right:12px; display:flex; flex-direction:column; gap:5px; }
+.bot-card { background:rgba(5,13,26,.78); border:1px solid #1a3a6a; border-radius:8px; padding:5px 8px; display:flex; align-items:center; gap:5px; }
+.bot-card.dead { opacity:.22; }
+.bot-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.bot-nm { font-size:9px; font-weight:800; color:#cde8ff; }
+.bot-bar-bg { width:52px; height:4px; background:#0a1828; border-radius:2px; overflow:hidden; }
+.bot-bar-fill { height:100%; border-radius:2px; }
+#hud-sb { position:absolute; top:12px; left:50%; transform:translateX(-50%); display:none; gap:10px; background:rgba(5,13,26,.8); border:1px solid #1a3a6a; border-radius:10px; padding:5px 14px; }
+#hud-sb-b, #hud-sb-r { font-size:13px; font-weight:800; color:#cde8ff; }
+
+/* Mobile controls */
+#joystick-wrap { position:fixed; bottom:22px; left:22px; width:116px; height:116px; z-index:10; display:none; touch-action:none; }
+#joy-base { position:absolute; inset:0; border-radius:50%; background:rgba(10,30,60,.55); border:2px solid rgba(90,200,250,.28); }
+#joy-knob { position:absolute; width:46px; height:46px; border-radius:50%; background:rgba(90,200,250,.45); border:2px solid rgba(90,200,250,.75); top:50%; left:50%; transform:translate(-50%,-50%); }
+#shoot-btn { position:fixed; bottom:32px; right:32px; width:76px; height:76px; border-radius:50%; background:rgba(255,80,50,.22); border:2px solid rgba(255,110,70,.55); display:none; align-items:center; justify-content:center; font-size:26px; z-index:10; touch-action:none; }
+
+/* Exit + Result */
+#btn-exit { position:fixed; bottom:22px; right:12px; z-index:10; background:rgba(5,13,26,.85); border:1px solid #3a3a6a; border-radius:10px; padding:7px 12px; color:#ff7a5a; font-size:12px; font-weight:800; cursor:pointer; display:none; pointer-events:auto; }
+#result-screen { position:fixed; inset:0; background:rgba(5,13,26,.9); z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+#res-emoji { font-size:52px; }
+#res-title { font-size:26px; font-weight:900; color:#cde8ff; text-align:center; }
+#res-km { font-size:15px; color:#5ac8fa; text-align:center; }
+#res-btns { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+#btn-again { background:linear-gradient(135deg,#3a9fd8,#5ac8fa); color:#050d1a; border:none; border-radius:12px; padding:12px 26px; font-size:15px; font-weight:900; cursor:pointer; }
+#btn-menu { background:#0d2040; color:#ff7a5a; border:1px solid #3a3a6a; border-radius:12px; padding:12px 26px; font-size:15px; font-weight:900; cursor:pointer; }
+#btn-again:active, #btn-menu:active { opacity:.85; }
+
+@keyframes bob { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-10px) rotate(3deg)} }
+</style>
 </head>
 <body>
+
 <canvas id="canvas"></canvas>
 
-<!-- ══ AUTH SCREEN ══ -->
-<div id="auth-screen">
+<!-- AUTH -->
+<div id="auth-screen" class="screen active">
   <div id="auth-box">
-    <div id="auth-penguin">🐧</div>
-    <h2 id="auth-title">PENGUIN MAYHEM</h2>
-    <p id="auth-sub">Log in of maak een account aan</p>
-    <select id="auth-mode"><option value="login">Inloggen</option><option value="register">Account aanmaken</option></select>
-    <input id="auth-username" type="text" placeholder="Gebruikersnaam" maxlength="20" autocomplete="username">
-    <input id="auth-password" type="password" placeholder="Wachtwoord" autocomplete="current-password">
+    <div class="auth-penguin">🐧</div>
+    <div class="auth-title">PENGUIN MAYHEM</div>
+    <div class="auth-sub">Log in of maak een account aan</div>
+    <select id="auth-type"><option value="login">Inloggen</option><option value="register">Account aanmaken</option></select>
+    <input id="auth-user" type="text" placeholder="Gebruikersnaam" maxlength="20">
+    <input id="auth-pass" type="password" placeholder="Wachtwoord">
     <div id="auth-error"></div>
-    <button id="auth-submit">▶ Doorgaan</button>
+    <button id="btn-auth">▶ Doorgaan</button>
   </div>
 </div>
 
-<!-- ══ MAIN MENU (landscape layout) ══ -->
-<div id="main-menu">
-
-  <!-- TOP BAR -->
-  <div id="top-bar">
-    <div id="top-left">
-      <div id="user-badge">
-        <span id="user-avatar">🐧</span>
-        <div id="user-info">
-          <span id="user-name">gebruiker</span>
-          <span id="user-zone">⛺ Base Camp</span>
-        </div>
+<!-- MAIN MENU -->
+<div id="menu-screen" class="screen">
+  <!-- Top -->
+  <div id="menu-top">
+    <div id="user-badge">
+      <span id="user-av">🐧</span>
+      <div>
+        <div id="user-name">gebruiker</div>
+        <div id="user-zone">⛺ Base Camp</div>
       </div>
     </div>
-    <div id="top-title">PENGUIN MAYHEM</div>
-    <div id="top-right">
-      <button class="top-btn" id="profile-btn">👤 Profiel</button>
-      <button class="top-btn disabled" id="friends-btn">👥 Friends</button>
-    </div>
+    <div id="menu-title">PENGUIN MAYHEM</div>
+    <button id="btn-profile">👤 Profiel</button>
   </div>
 
-  <!-- MAIN CONTENT -->
-  <div id="menu-content">
-
-    <!-- LEFT: Character list -->
-    <div id="char-column">
-      <div class="col-label">CHARACTER</div>
-      <div id="char-list">
-        <div class="char-card selected" data-cls="surfer">
-          <div class="cc-emoji">🏄</div>
-          <div class="cc-name" style="color:#5ac8fa">Surfer</div>
-          <div class="cc-km" id="ckm-surfer">0.0 km</div>
-        </div>
-        <div class="char-card" data-cls="soldier">
-          <div class="cc-emoji">🪖</div>
-          <div class="cc-name" style="color:#ff9a5a">Soldier</div>
-          <div class="cc-km" id="ckm-soldier">0.0 km</div>
-        </div>
-        <div class="char-card" data-cls="mage">
-          <div class="cc-emoji">🧊</div>
-          <div class="cc-name" style="color:#a080f8">Ice Mage</div>
-          <div class="cc-km" id="ckm-mage">0.0 km</div>
-        </div>
-        <div class="char-card" data-cls="tank">
-          <div class="cc-emoji">🛡️</div>
-          <div class="cc-name" style="color:#f0c040">Tank</div>
-          <div class="cc-km" id="ckm-tank">0.0 km</div>
-        </div>
+  <!-- Middle -->
+  <div id="menu-mid">
+    <!-- Characters (left) -->
+    <div id="char-col">
+      <div class="col-lbl">CLASS</div>
+      <div class="char-btn sel" data-cls="surfer">
+        <div class="cb-emoji">🏄</div>
+        <div class="cb-name" style="color:#5ac8fa">Surfer</div>
+        <div class="cb-km" id="ckm-surfer">0.0 km</div>
+      </div>
+      <div class="char-btn" data-cls="soldier">
+        <div class="cb-emoji">🪖</div>
+        <div class="cb-name" style="color:#ff9a5a">Soldier</div>
+        <div class="cb-km" id="ckm-soldier">0.0 km</div>
+      </div>
+      <div class="char-btn" data-cls="mage">
+        <div class="cb-emoji">🧊</div>
+        <div class="cb-name" style="color:#a080f8">Mage</div>
+        <div class="cb-km" id="ckm-mage">0.0 km</div>
+      </div>
+      <div class="char-btn" data-cls="tank">
+        <div class="cb-emoji">🛡️</div>
+        <div class="cb-name" style="color:#f0c040">Tank</div>
+        <div class="cb-km" id="ckm-tank">0.0 km</div>
       </div>
     </div>
 
-    <!-- CENTER: Mountain -->
-    <div id="mountain-center">
-      <div id="mountain-wrap">
-        <canvas id="mountain-canvas" width="340" height="260"></canvas>
-        <div id="mountain-info">
-          <div id="mountain-zone-label">⛺ Base Camp</div>
-          <div id="mountain-km-label">0.0 km</div>
-          <div id="mountain-progress-wrap">
-            <div id="mountain-progress-bar">
-              <div id="mountain-progress-fill"></div>
-            </div>
-            <div id="mountain-progress-text">0 / 100 km</div>
-          </div>
+    <!-- Mountain (center) -->
+    <div id="mountain-mid">
+      <canvas id="mtn-canvas" width="280" height="200"></canvas>
+      <div id="mtn-info">
+        <div id="mtn-zone">⛺ Base Camp</div>
+        <div id="mtn-km">0.0 km</div>
+        <div id="mtn-bar-wrap">
+          <div id="mtn-bar-bg"><div id="mtn-bar-fill"></div></div>
+          <div id="mtn-bar-txt">0 / 100 km</div>
         </div>
       </div>
-      <button id="play-btn">▶ SPEEL</button>
-      <div id="result-text"></div>
+      <button id="btn-play">▶ SPEEL</button>
     </div>
 
-    <!-- RIGHT: (empty for balance, profile panel goes here) -->
-    <div id="right-col">
-      <button class="top-btn" id="profile-btn-2" style="display:none">👤</button>
-    </div>
-
+    <!-- Right spacer -->
+    <div style="width:100px;flex-shrink:0;border-left:1px solid rgba(30,70,120,.3)"></div>
   </div>
 
-  <!-- BOTTOM: Gamemodes -->
-  <div id="bottom-bar">
-    <div class="col-label" id="mode-label-vert">GAMEMODES</div>
+  <!-- Mode bar (bottom) -->
+  <div id="mode-bar">
+    <div id="mode-lbl">MODES</div>
     <div id="mode-list">
-      <div class="mode-card selected" data-mode="showdown">
-        <div class="mc-icon">⚔️</div>
-        <div class="mc-name">Showdown</div>
-        <div class="mc-km" id="mkm-showdown">0.0 km</div>
+      <div class="mode-btn sel" data-mode="showdown">
+        <div class="mb-icon">⚔️</div>
+        <div class="mb-name">Showdown</div>
+        <div class="mb-km" id="mkm-showdown">0.0 km</div>
       </div>
-      <div class="mode-card" data-mode="snowball">
-        <div class="mc-icon">❄️</div>
-        <div class="mc-name">Snowball</div>
-        <div class="mc-km" id="mkm-snowball">0.0 km</div>
+      <div class="mode-btn" data-mode="snowball">
+        <div class="mb-icon">❄️</div>
+        <div class="mb-name">Snowball</div>
+        <div class="mb-km" id="mkm-snowball">0.0 km</div>
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- ══ PROFILE PANEL ══ -->
+<!-- PROFILE PANEL -->
 <div id="profile-panel">
-  <div id="profile-header">
-    <div id="profile-avatar">🐧</div>
-    <div>
-      <div id="profile-username">gebruiker</div>
-      <div id="profile-label">Jouw stats</div>
-    </div>
-    <button id="profile-close">✕</button>
+  <div id="pp-header">
+    <div id="pp-av">🐧</div>
+    <div><div id="pp-name">gebruiker</div><div id="pp-sub">Jouw stats</div></div>
+    <button id="btn-close-pp">✕</button>
   </div>
-  <div class="panel-section-title">🏆 Wins per class</div>
-  <div id="profile-wins"></div>
-  <div class="panel-section-title">🏔️ Berg voortgang</div>
-  <div id="profile-mountains"></div>
-  <button id="auth-logout">🚪 Uitloggen</button>
+  <div class="pp-section">🏆 Wins</div>
+  <div id="pp-wins"></div>
+  <div class="pp-section">🏔️ Bergen</div>
+  <div id="pp-mtns"></div>
+  <button id="btn-logout">🚪 Uitloggen</button>
 </div>
 
-<!-- ══ HUD (in-game) ══ -->
+<!-- HUD -->
 <div id="hud">
-  <div id="my-hp-wrap">
-    <div id="my-hp-name">🏄 SURFER — JIJ</div>
-    <div id="my-hp-bar-bg"><div id="my-hp-bar"></div></div>
-    <div id="my-hp-text">85 / 85 HP</div>
+  <div id="hud-hp-wrap">
+    <div id="hud-hp-name">🏄 SURFER</div>
+    <div id="hud-hp-bg"><div id="hud-hp-fill"></div></div>
+    <div id="hud-hp-txt">85 / 85 HP</div>
   </div>
-  <div id="alive-wrap"><div id="alive-num">5</div><div id="alive-lbl">over</div></div>
-  <div id="minimap-wrap"><canvas id="minimap" width="92" height="92"></canvas></div>
-  <div id="ammo-wrap"><div id="ammo-lbl">Ammo</div><div id="ammo-dots"></div></div>
-  <div id="bot-cards"></div>
-  <div id="sb-score" style="display:none">
-    <div id="sb-blue-score">🔵 0%</div>
-    <div id="sb-red-score">🔴 0%</div>
-  </div>
-  <div id="inventory-bar"></div>
-  <div id="pickup-msg"></div>
+  <div id="hud-alive"><div id="hud-alive-n">5</div><div id="hud-alive-l">over</div></div>
+  <div id="hud-minimap"><canvas id="minimap" width="88" height="88"></canvas></div>
+  <div id="hud-ammo"><div id="hud-ammo-lbl">Ammo</div><div id="hud-ammo-dots"></div></div>
+  <div id="hud-bots"></div>
+  <div id="hud-sb"><div id="hud-sb-b">🔵 0%</div><div id="hud-sb-r">🔴 0%</div></div>
 </div>
 
-<!-- MOBILE CONTROLS -->
-<div id="joystick-area"><div id="joystick-base"></div><div id="joystick-knob"></div></div>
+<!-- Mobile controls -->
+<div id="joystick-wrap"><div id="joy-base"></div><div id="joy-knob"></div></div>
 <div id="shoot-btn">🔫</div>
 
-<!-- EXIT BUTTON -->
-<button id="exit-btn">🚪 Exit</button>
-
-<!-- RESULT OVERLAY -->
-<div id="result-overlay">
-  <div style="font-size:52px" id="result-emoji">🏆</div>
-  <h2 id="result-title">JIJ WINT!</h2>
-  <div id="result-km-text"></div>
-  <div class="result-actions">
-    <button id="result-play-again">▶ Opnieuw</button>
-    <button id="result-exit">🏠 Naar menu</button>
-  </div>
-</div>
-
-<!-- GAMEMODE POPUP (kept for JS compatibility) -->
-<div id="mode-popup" style="display:none">
-  <div id="mode-popup-box">
-    <h2>Gamemodes</h2>
-    <button class="mode-popup-btn active" data-mode="showdown"><div class="mpb-icon">⚔️</div><div class="mpb-info"><div class="mpb-name">Showdown</div><div class="mpb-km" id="mpm-showdown"></div></div></button>
-    <button class="mode-popup-btn" data-mode="snowball"><div class="mpb-icon">❄️</div><div class="mpb-info"><div class="mpb-name">Snowball</div><div class="mpb-km" id="mpm-snowball"></div></div></button>
-    <button id="mode-popup-close">Sluiten</button>
+<!-- Exit / Result -->
+<button id="btn-exit">🚪 Exit</button>
+<div id="result-screen">
+  <div id="res-emoji">🏆</div>
+  <div id="res-title">JIJ WINT!</div>
+  <div id="res-km"></div>
+  <div id="res-btns">
+    <button id="btn-again">▶ Opnieuw</button>
+    <button id="btn-menu">🏠 Menu</button>
   </div>
 </div>
 
 <script src="game.js"></script>
 <script>
-// ── Mountain canvas drawing
-function drawMountainCanvas(){
-  const c=document.getElementById('mountain-canvas');
-  if(!c)return;
-  const cx=c.getContext('2d');
-  const W=c.width,H=c.height;
-  cx.clearRect(0,0,W,H);
+// ══════════════════════════════════
+//  MENU LOGIC (runs after game.js)
+// ══════════════════════════════════
 
-  // Sky gradient
-  const sky=cx.createLinearGradient(0,0,0,H);
-  sky.addColorStop(0,'#050d1a');
-  sky.addColorStop(1,'#0d2a4a');
-  cx.fillStyle=sky;cx.fillRect(0,0,W,H);
+// Mountain canvas
+const mtnC = document.getElementById('mtn-canvas');
+const mtnX = mtnC.getContext('2d');
+
+function drawMtn() {
+  const W = mtnC.width, H = mtnC.height;
+  mtnX.clearRect(0,0,W,H);
+
+  // Sky
+  const sky = mtnX.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#030810'); sky.addColorStop(1,'#0a1e38');
+  mtnX.fillStyle=sky; mtnX.fillRect(0,0,W,H);
 
   // Stars
-  cx.fillStyle='rgba(255,255,255,.6)';
-  for(let i=0;i<30;i++){
-    cx.beginPath();
-    cx.arc((i*137)%W,(i*89)%(H*.5),i%4===0?1.5:1,0,Math.PI*2);
-    cx.fill();
+  mtnX.fillStyle='rgba(255,255,255,.5)';
+  for(let i=0;i<25;i++){mtnX.beginPath();mtnX.arc((i*173)%W,(i*89)%(H*.55),1,0,Math.PI*2);mtnX.fill();}
+
+  // Mountain
+  mtnX.fillStyle='#12304a';
+  mtnX.beginPath();
+  mtnX.moveTo(0,H);
+  mtnX.lineTo(W*.1,H*.72); mtnX.lineTo(W*.3,H*.82);
+  mtnX.lineTo(W*.5,H*.08); // peak
+  mtnX.lineTo(W*.7,H*.78); mtnX.lineTo(W*.9,H*.68);
+  mtnX.lineTo(W,H); mtnX.closePath(); mtnX.fill();
+
+  // Snow
+  mtnX.fillStyle='#ddf0ff';
+  mtnX.beginPath();
+  mtnX.moveTo(W*.43,H*.26); mtnX.lineTo(W*.5,H*.08); mtnX.lineTo(W*.57,H*.26);
+  mtnX.closePath(); mtnX.fill();
+
+  // Get km
+  const km = (typeof getMountainKmPerChar==='function')
+    ? getMountainKmPerChar(window._selMode||'showdown', window._selCls||'surfer')
+    : 0;
+  const pct = Math.min(1, km/100);
+
+  // Flag position along mountain slope
+  const flagX = W*.5 + Math.sin(pct*Math.PI)*W*.06;
+  const flagY = H*.08 + (1-pct)*(H*.72-H*.08);
+
+  // Path line
+  mtnX.strokeStyle='rgba(240,192,60,.5)'; mtnX.lineWidth=1.5; mtnX.setLineDash([4,4]);
+  mtnX.beginPath(); mtnX.moveTo(W*.25,H*.8);
+  mtnX.bezierCurveTo(W*.35,H*.55,W*.44,H*.35,flagX,flagY);
+  mtnX.stroke(); mtnX.setLineDash([]);
+
+  // Flag
+  mtnX.save(); mtnX.translate(flagX,flagY);
+  mtnX.fillStyle='#ccc'; mtnX.fillRect(-1,-16,2,16);
+  mtnX.fillStyle=km>=100?'#f0c040':'#ff3333';
+  mtnX.beginPath(); mtnX.moveTo(0,-16); mtnX.lineTo(10,-11); mtnX.lineTo(0,-6); mtnX.closePath(); mtnX.fill();
+  mtnX.restore();
+
+  // Update info below canvas
+  const zone = (typeof getZone==='function') ? getZone(km) : {icon:'⛺',name:'Base Camp',min:0,max:10};
+  document.getElementById('mtn-zone').textContent = zone.icon+' '+zone.name;
+  document.getElementById('mtn-km').textContent = km.toFixed(1)+' km';
+  const zMax = zone.max===999 ? Math.max(km+10,110) : zone.max;
+  const inZone = Math.max(0,Math.min(100,((km-zone.min)/(zMax-zone.min))*100));
+  document.getElementById('mtn-bar-fill').style.width = inZone+'%';
+  document.getElementById('mtn-bar-txt').textContent = km.toFixed(1)+' / 100 km';
+}
+
+function refreshMenu() {
+  if(typeof getMountainKmPerChar!=='function') return;
+  const cls = window._selCls||'surfer';
+  const mode = window._selMode||'showdown';
+
+  // Char km labels
+  ['surfer','soldier','mage','tank'].forEach(c=>{
+    const km=getMountainKmPerChar(mode,c);
+    const z=getZone(km);
+    const el=document.getElementById('ckm-'+c);
+    if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
+  });
+
+  // Mode km labels
+  ['showdown','snowball'].forEach(m=>{
+    const km=getMountainKm(m);
+    const z=getZone(km);
+    const el=document.getElementById('mkm-'+m);
+    if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
+  });
+
+  // User badge
+  if(window.currentUser){
+    document.getElementById('user-name').textContent=currentUser.username;
+    document.getElementById('pp-name').textContent=currentUser.username;
+    const km=getMountainKmPerChar(mode,cls);
+    const z=getZone(km);
+    document.getElementById('user-zone').textContent=z.icon+' '+z.name;
   }
 
-  // Get current km for selected mode+char
-  const km = typeof getMountainKmPerChar==='function'
-    ? getMountainKmPerChar(window.selectedMode||'showdown', window.selectedClass||'surfer')
-    : 0;
-  const maxKm=100;
-  const pct=Math.min(1,km/maxKm);
-
-  // Mountain silhouette
-  cx.fillStyle='#1a3a6a';
-  cx.beginPath();
-  cx.moveTo(0,H);
-  cx.lineTo(W*.15,H*.7);
-  cx.lineTo(W*.35,H*.85);
-  cx.lineTo(W*.5,H*.1);   // peak
-  cx.lineTo(W*.65,H*.8);
-  cx.lineTo(W*.85,H*.65);
-  cx.lineTo(W,H);
-  cx.closePath();cx.fill();
-
-  // Snow cap
-  cx.fillStyle='#d0e8ff';
-  cx.beginPath();
-  cx.moveTo(W*.42,H*.28);
-  cx.lineTo(W*.5,H*.1);
-  cx.lineTo(W*.58,H*.28);
-  cx.closePath();cx.fill();
-
-  // Progress line on mountain
-  // The flag moves up the mountain based on km
-  const flagX=W*.5+(Math.sin(pct*Math.PI))*W*.08;
-  const flagY=H*.1+(1-pct)*(H*.7-H*.1);
-
-  // Draw path line
-  cx.strokeStyle='rgba(255,200,60,.6)';
-  cx.lineWidth=2;
-  cx.setLineDash([4,4]);
-  cx.beginPath();
-  cx.moveTo(W*.3,H*.75);
-  cx.bezierCurveTo(W*.35,H*.5,W*.45,H*.35,flagX,flagY);
-  cx.stroke();
-  cx.setLineDash([]);
-
-  // Zone color bands
-  const zones=[
-    {name:'Base Camp',  col:'rgba(60,180,100,.15)', min:0,   max:.1},
-    {name:'Snow Trail', col:'rgba(70,160,200,.15)', min:.1,  max:.25},
-    {name:'Ice Ridge',  col:'rgba(80,160,220,.15)', min:.25, max:.5},
-    {name:'Blizzard',   col:'rgba(100,180,240,.15)',min:.5,  max:.75},
-    {name:'Summit',     col:'rgba(180,220,255,.2)', min:.75, max:1},
-  ];
-
-  // Flag (current position)
-  cx.save();
-  cx.translate(flagX,flagY);
-  // Pole
-  cx.fillStyle='#ffffff';
-  cx.fillRect(-1,-18,2,18);
-  // Flag
-  cx.fillStyle=km>=100?'#f0c040':'#ff4444';
-  cx.beginPath();
-  cx.moveTo(0,-18);cx.lineTo(12,-13);cx.lineTo(0,-8);
-  cx.closePath();cx.fill();
-  // Glow if at summit
-  if(km>=100){cx.shadowColor='#f0c040';cx.shadowBlur=12;}
-  cx.restore();
-
-  // "CURRENT HEIGHT" label in center
-  cx.fillStyle='rgba(255,255,255,.08)';
-  cx.font='bold 11px Segoe UI';
-  cx.textAlign='center';
-  cx.fillText(`${km.toFixed(1)} km`,W*.5,H*.55);
+  drawMtn();
 }
 
-// Redraw mountain every second
-setInterval(drawMountainCanvas,1000);
-drawMountainCanvas();
-
-// Update mountain canvas when selection changes
-const origUpdateChar=window.updateCharKmDisplay;
-window.updateCharKmDisplay=function(){
-  if(origUpdateChar)origUpdateChar();
-  drawMountainCanvas();
-  updateBottomModeKm();
-  updateTopUserBadge();
-};
-
-function updateBottomModeKm(){
-  ['showdown','snowball'].forEach(mode=>{
-    const el=document.getElementById('mkm-'+mode);
-    if(!el)return;
-    const km=typeof getMountainKm==='function'?getMountainKm(mode):0;
-    const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp'};
-    el.textContent=`${zone.icon} ${km.toFixed(1)} km`;
-  });
-  // Update mountain center info
-  const cls=window.selectedClass||'surfer';
-  const mode=window.selectedMode||'showdown';
-  const km=typeof getMountainKmPerChar==='function'?getMountainKmPerChar(mode,cls):0;
-  const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp',min:0,max:10};
-  const zoneMax=zone.max===999?km+50:zone.max;
-  const inZonePct=Math.min(100,Math.max(0,((km-zone.min)/(zoneMax-zone.min))*100));
-  if(document.getElementById('mountain-zone-label'))
-    document.getElementById('mountain-zone-label').textContent=`${zone.icon} ${zone.name}`;
-  if(document.getElementById('mountain-km-label'))
-    document.getElementById('mountain-km-label').textContent=`${km.toFixed(1)} km`;
-  if(document.getElementById('mountain-progress-fill'))
-    document.getElementById('mountain-progress-fill').style.width=inZonePct+'%';
-  if(document.getElementById('mountain-progress-text'))
-    document.getElementById('mountain-progress-text').textContent=`${km.toFixed(1)} / 100 km`;
-}
-
-function updateTopUserBadge(){
-  if(!window.currentUser)return;
-  const mode=window.selectedMode||'showdown';
-  const cls=window.selectedClass||'surfer';
-  const km=typeof getMountainKmPerChar==='function'?getMountainKmPerChar(mode,cls):0;
-  const zone=typeof getZone==='function'?getZone(km):{icon:'⛺',name:'Base Camp'};
-  const el=document.getElementById('user-zone');
-  if(el)el.textContent=`${zone.icon} ${zone.name}`;
-  const nameEl=document.getElementById('user-name');
-  if(nameEl&&window.currentUser)nameEl.textContent=window.currentUser.username;
-}
-
-// ── Character cards in new menu
-document.querySelectorAll('.char-card').forEach(card=>{
-  card.addEventListener('click',()=>{
-    document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('selected'));
-    card.classList.add('selected');
-    window.selectedClass=card.dataset.cls;
-    if(typeof updateCharKmDisplay==='function')updateCharKmDisplay();
-    drawMountainCanvas();
+// Click handlers
+document.querySelectorAll('.char-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    window._selCls=btn.dataset.cls;
+    if(typeof selectedClass!=='undefined') window.selectedClass=btn.dataset.cls;
+    refreshMenu();
   });
 });
 
-// ── Mode cards in bottom bar
-document.querySelectorAll('.mode-card').forEach(card=>{
-  card.addEventListener('click',()=>{
-    document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected'));
-    card.classList.add('selected');
-    window.selectedMode=card.dataset.mode;
-    if(typeof updateCharKmDisplay==='function')updateCharKmDisplay();
-    drawMountainCanvas();
-    updateBottomModeKm();
-    // Sync with game.js selectedMode
-    const lbl=document.getElementById('current-mode-label');
-    if(lbl){const names={showdown:'⚔️ Showdown',snowball:'❄️ Snowball'};lbl.textContent=names[window.selectedMode];}
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    window._selMode=btn.dataset.mode;
+    if(typeof selectedMode!=='undefined') window.selectedMode=btn.dataset.mode;
+    refreshMenu();
   });
 });
 
-// Profile buttons
-document.getElementById('profile-btn').addEventListener('click',()=>{
+document.getElementById('btn-profile').addEventListener('click',()=>{
   const p=document.getElementById('profile-panel');
-  p.style.display=p.style.display==='flex'?'none':'flex';
-  if(typeof updateProfileMountains==='function')updateProfileMountains();
+  const isOpen=p.style.display==='flex';
+  p.style.display=isOpen?'none':'flex';
+  if(!isOpen && typeof updateProfileUI==='function') { updateProfileUI(); updateProfileMountains(); }
 });
-document.getElementById('profile-close').addEventListener('click',()=>{
+document.getElementById('btn-close-pp').addEventListener('click',()=>{
   document.getElementById('profile-panel').style.display='none';
 });
+
+// Sync globals
+window._selCls='surfer'; window._selMode='showdown';
+
+// Refresh every second when menu visible
+setInterval(()=>{
+  if(document.getElementById('menu-screen').classList.contains('active')) refreshMenu();
+},1000);
 </script>
 </body>
 </html>
