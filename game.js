@@ -109,13 +109,37 @@ function updateProfileMountains(){
 }
 
 // ══════════════════════════════════════════
-//  ACCOUNTS
+//  ACCOUNTS  — localStorage met in-memory fallback
 // ══════════════════════════════════════════
 let currentUser=null;
-function loadUsers(){try{return JSON.parse(localStorage.getItem('pm_users')||'{}')}catch{return {};}}
-function saveUsers(u){try{localStorage.setItem('pm_users',JSON.stringify(u));}catch{}}
-function loadCurrentUser(){const n=localStorage.getItem('pm_current');if(!n)return null;return loadUsers()[n]||null;}
-function saveCurrentUser(){if(!currentUser)return;const u=loadUsers();u[currentUser.username]=currentUser;saveUsers(u);localStorage.setItem('pm_current',currentUser.username);}
+
+// In-memory fallback als localStorage niet werkt
+const _memStore={};
+function _lsSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){_memStore[k]=v;return false;}}
+function _lsGet(k){try{const v=localStorage.getItem(k);if(v!==null)return v;}catch(e){}return _memStore[k]||null;}
+function _lsDel(k){try{localStorage.removeItem(k);}catch(e){}delete _memStore[k];}
+
+function loadUsers(){
+  try{
+    const raw=_lsGet('pm_users');
+    return raw?JSON.parse(raw):{};
+  }catch(e){return {};}
+}
+function saveUsers(u){
+  try{_lsSet('pm_users',JSON.stringify(u));}catch(e){console.warn('Could not save users',e);}
+}
+function loadCurrentUser(){
+  const name=_lsGet('pm_current');
+  if(!name)return null;
+  return loadUsers()[name]||null;
+}
+function saveCurrentUser(){
+  if(!currentUser)return;
+  const u=loadUsers();
+  u[currentUser.username]=currentUser;
+  saveUsers(u);
+  _lsSet('pm_current',currentUser.username);
+}
 function recordWin(cls){
   if(!currentUser)return;
   currentUser.wins[cls]=(currentUser.wins[cls]||0)+1;
@@ -174,7 +198,9 @@ document.getElementById('auth-submit').addEventListener('click',()=>{
   const users=loadUsers();
   if(mode==='register'){
     if(users[username]){errEl.textContent='Username al in gebruik!';return;}
-    users[username]={username,password,wins:{},mountains:{},streak:0};saveUsers(users);currentUser=users[username];
+    users[username]={username,password,wins:{},mountains:{},streak:0};
+    saveUsers(users);
+    currentUser=users[username];
   } else {
     if(!users[username]){errEl.textContent='Account niet gevonden!';return;}
     if(users[username].password!==password){errEl.textContent='Verkeerd wachtwoord!';return;}
@@ -182,11 +208,13 @@ document.getElementById('auth-submit').addEventListener('click',()=>{
     if(!currentUser.mountains)currentUser.mountains={};
     if(currentUser.streak===undefined)currentUser.streak=0;
   }
-  localStorage.setItem('pm_current',currentUser.username);
+  _lsSet('pm_current',currentUser.username);
   showMainMenu();
 });
+
 document.getElementById('auth-logout').addEventListener('click',()=>{
-  currentUser=null;localStorage.removeItem('pm_current');
+  currentUser=null;
+  _lsDel('pm_current');
   ['auth-username','auth-password'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('auth-error').textContent='';
   document.getElementById('profile-panel').style.display='none';
@@ -195,7 +223,13 @@ document.getElementById('auth-logout').addEventListener('click',()=>{
 document.getElementById('profile-btn').addEventListener('click',()=>{const p=document.getElementById('profile-panel');p.style.display=p.style.display==='flex'?'none':'flex';updateProfileMountains();});
 document.getElementById('profile-close').addEventListener('click',()=>{document.getElementById('profile-panel').style.display='none';});
 currentUser=loadCurrentUser();
-if(currentUser){if(!currentUser.mountains)currentUser.mountains={};if(currentUser.streak===undefined)currentUser.streak=0;showMainMenu();}else showAuthScreen();
+if(currentUser){
+  if(!currentUser.mountains)currentUser.mountains={};
+  if(currentUser.streak===undefined)currentUser.streak=0;
+  showMainMenu();
+} else {
+  showAuthScreen();
+}
 
 // ══════════════════════════════════════════
 //  GAMEMODE + CHARACTER SELECT
