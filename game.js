@@ -132,16 +132,26 @@ function recordLoss(cls){
   saveCurrentUser();
 }
 
-function showAuthScreen(){document.getElementById('auth-screen').style.display='flex';document.getElementById('overlay').style.display='none';document.getElementById('profile-btn').style.display='none';}
+function showAuthScreen(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('main-menu').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('exit-btn').style.display='none';
+  document.getElementById('result-overlay').style.display='none';
+}
 function showMainMenu(){
   document.getElementById('auth-screen').style.display='none';
-  document.getElementById('overlay').style.display='flex';
-  document.getElementById('profile-btn').style.display='flex';
+  document.getElementById('main-menu').style.display='flex';
+  document.getElementById('hud').style.display='none';
   document.getElementById('profile-panel').style.display='none';
   document.getElementById('result-overlay').style.display='none';
   document.getElementById('exit-btn').style.display='none';
   document.getElementById('mode-popup').style.display='none';
+  if(isMobile){document.getElementById('joystick-area').style.display='none';document.getElementById('shoot-btn').style.display='none';}
   updateProfileUI();updateMountainDisplay();updateCharKmDisplay();
+  if(typeof updateBottomModeKm==='function')updateBottomModeKm();
+  if(typeof updateTopUserBadge==='function')updateTopUserBadge();
+  if(typeof drawMountainCanvas==='function')drawMountainCanvas();
 }
 function updateProfileUI(){
   if(!currentUser)return;
@@ -764,6 +774,7 @@ document.getElementById('exit-btn').addEventListener('click',()=>{
   running=false;
   if(fid)cancelAnimationFrame(fid);
   recordLoss(selectedClass);
+  document.getElementById('hud').style.display='none';
   showMainMenu();
 });
 
@@ -774,6 +785,7 @@ document.getElementById('result-play-again').addEventListener('click',()=>{
 });
 document.getElementById('result-exit').addEventListener('click',()=>{
   document.getElementById('result-overlay').style.display='none';
+  document.getElementById('hud').style.display='none';
   showMainMenu();
 });
 
@@ -781,12 +793,18 @@ document.getElementById('result-exit').addEventListener('click',()=>{
 //  START
 // ══════════════════════════════════════════
 function startGame(){
+  document.getElementById('main-menu').style.display='none';
   document.getElementById('overlay').style.display='none';
   document.getElementById('result-overlay').style.display='none';
+  document.getElementById('hud').style.display='block';
   document.getElementById('bot-cards').innerHTML='';
   document.getElementById('profile-panel').style.display='none';
   document.getElementById('inventory-bar').innerHTML='';
   document.getElementById('exit-btn').style.display='block';
+  if(isMobile){
+    document.getElementById('joystick-area').style.display='block';
+    document.getElementById('shoot-btn').style.display='flex';
+  }
 
   initGrid();spawnAll();initIce();
   if(selectedMode==='snowball'){
