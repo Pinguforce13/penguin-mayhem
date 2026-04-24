@@ -42,42 +42,71 @@ canvas { display:block; position:fixed; top:0; left:0; z-index:0; }
 #btn-profile { background:rgba(10,30,60,.7); border:1px solid #2a5a9a; border-radius:10px; padding:6px 12px; color:#cde8ff; font-size:12px; font-weight:700; cursor:pointer; }
 #btn-profile:active { opacity:.8; }
 
-/* Middle layout */
+/* Middle: chars LEFT | mountain CENTER fills everything | RIGHT empty */
 #menu-mid { display:flex; flex:1; min-height:0; }
 
-/* Character column */
-#char-col { width:100px; flex-shrink:0; display:flex; flex-direction:column; gap:5px; padding:8px 5px; overflow-y:auto; border-right:1px solid rgba(30,70,120,.3); }
+/* Character column — left, fixed width */
+#char-col { width:108px; flex-shrink:0; display:flex; flex-direction:column; gap:6px; padding:8px 6px; overflow-y:auto; border-right:1px solid rgba(30,70,120,.3); }
 #char-col::-webkit-scrollbar { display:none; }
 .col-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; text-align:center; padding-bottom:2px; }
-.char-btn { background:rgba(10,28,55,.7); border:2px solid #1a3a6a; border-radius:10px; padding:7px 5px; cursor:pointer; text-align:center; }
+.char-btn { background:rgba(10,28,55,.7); border:2px solid #1a3a6a; border-radius:10px; padding:8px 5px; cursor:pointer; text-align:center; flex-shrink:0; }
 .char-btn:active { opacity:.8; }
-.char-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); }
-.cb-emoji { font-size:20px; }
+.char-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); box-shadow:0 0 10px rgba(240,192,60,.2); }
+.cb-emoji { font-size:22px; }
 .cb-name { font-size:9px; font-weight:800; margin:2px 0; }
 .cb-km { font-size:9px; color:#4a8aaa; }
 .char-btn.sel .cb-km { color:#f0c040; }
 
-/* Mountain center */
-#mountain-mid { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:8px; }
-#mtn-canvas { border-radius:10px; border:1px solid rgba(30,70,120,.3); max-width:100%; }
-#mtn-info { text-align:center; }
-#mtn-zone { font-size:13px; font-weight:800; color:#cde8ff; }
-#mtn-km { font-size:20px; font-weight:900; color:#5ac8fa; }
-#mtn-bar-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; margin-top:4px; }
-#mtn-bar-bg { width:180px; height:6px; background:rgba(10,24,40,.8); border-radius:3px; overflow:hidden; border:1px solid #1a3a6a; }
-#mtn-bar-fill { height:100%; background:linear-gradient(90deg,#3a9fd8,#5ac8fa); border-radius:3px; width:0%; transition:width .4s; }
-#mtn-bar-txt { font-size:10px; color:#3a6a9a; }
-#btn-play { background:linear-gradient(135deg,#3a9fd8,#5ac8fa); color:#050d1a; border:none; border-radius:14px; padding:13px 44px; font-size:17px; font-weight:900; cursor:pointer; box-shadow:0 4px 18px rgba(90,200,250,.3); margin-top:4px; }
-#btn-play:active { opacity:.85; }
+/* Mountain — center, takes all remaining space */
+#mountain-mid {
+  flex:1;
+  position:relative;
+  overflow:hidden;
+}
+/* Canvas fills the entire center area */
+#mtn-canvas {
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+}
+/* Info overlay — top center of mountain */
+#mtn-info {
+  position:absolute;
+  top:10px; left:50%; transform:translateX(-50%);
+  text-align:center;
+  background:rgba(5,13,26,.65);
+  border:1px solid rgba(30,70,120,.4);
+  border-radius:10px;
+  padding:6px 14px;
+  pointer-events:none;
+}
+#mtn-zone { font-size:12px; font-weight:800; color:#cde8ff; }
+#mtn-km { font-size:22px; font-weight:900; color:#5ac8fa; line-height:1.1; }
+#mtn-bar-wrap { margin-top:4px; }
+#mtn-bar-bg { width:160px; height:5px; background:rgba(10,24,40,.8); border-radius:3px; overflow:hidden; border:1px solid #1a3a6a; margin:0 auto 2px; }
+#mtn-bar-fill { height:100%; background:linear-gradient(90deg,#3a9fd8,#5ac8fa); border-radius:3px; width:0%; transition:width .5s; }
+#mtn-bar-txt { font-size:9px; color:#3a6a9a; }
 
-/* Mode bottom */
+/* Play button — bottom RIGHT of mountain area */
+#btn-play {
+  position:absolute;
+  bottom:14px; right:14px;
+  background:linear-gradient(135deg,#3a9fd8,#5ac8fa);
+  color:#050d1a; border:none; border-radius:14px;
+  padding:13px 36px; font-size:17px; font-weight:900;
+  cursor:pointer; box-shadow:0 4px 20px rgba(90,200,250,.35);
+  z-index:2;
+}
+#btn-play:active { opacity:.85; transform:scale(.97); }
+
+/* Mode bottom bar */
 #mode-bar { display:flex; align-items:center; gap:8px; padding:8px 10px; border-top:1px solid rgba(30,70,120,.3); flex-shrink:0; height:82px; }
-#mode-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
-#mode-list { display:flex; gap:8px; overflow-x:auto; flex:1; }
+#mode-lbl { font-size:9px; font-weight:800; color:#3a6a9a; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; writing-mode:vertical-rl; transform:rotate(180deg); height:60px; display:flex; align-items:center; }
+#mode-list { display:flex; gap:8px; overflow-x:auto; flex:1; align-items:center; }
 #mode-list::-webkit-scrollbar { display:none; }
 .mode-btn { background:rgba(10,28,55,.7); border:2px solid #1a3a6a; border-radius:10px; padding:7px 14px; cursor:pointer; text-align:center; flex-shrink:0; min-width:90px; }
 .mode-btn:active { opacity:.8; }
-.mode-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); }
+.mode-btn.sel { border-color:#f0c040; background:rgba(30,22,5,.8); box-shadow:0 0 10px rgba(240,192,60,.2); }
 .mb-icon { font-size:18px; }
 .mb-name { font-size:10px; font-weight:800; color:#cde8ff; }
 .mb-km { font-size:9px; color:#4a8aaa; }
@@ -215,7 +244,7 @@ canvas { display:block; position:fixed; top:0; left:0; z-index:0; }
 
     <!-- Mountain (center) -->
     <div id="mountain-mid">
-      <canvas id="mtn-canvas" width="280" height="200"></canvas>
+      <canvas id="mtn-canvas"></canvas>
       <div id="mtn-info">
         <div id="mtn-zone">⛺ Base Camp</div>
         <div id="mtn-km">0.0 km</div>
@@ -296,145 +325,146 @@ canvas { display:block; position:fixed; top:0; left:0; z-index:0; }
 <script src="game.js"></script>
 <script>
 // ══════════════════════════════════
-//  MENU LOGIC (runs after game.js)
+//  MENU LOGIC
 // ══════════════════════════════════
-
-// Mountain canvas
 const mtnC = document.getElementById('mtn-canvas');
 const mtnX = mtnC.getContext('2d');
 
-function drawMtn() {
-  const W = mtnC.width, H = mtnC.height;
+function resizeMtn(){
+  const p=document.getElementById('mountain-mid');
+  mtnC.width=p.clientWidth; mtnC.height=p.clientHeight;
+}
+window.addEventListener('resize',resizeMtn);
+setTimeout(resizeMtn,50);
+
+function drawMtn(){
+  resizeMtn();
+  const W=mtnC.width, H=mtnC.height;
+  if(!W||!H)return;
   mtnX.clearRect(0,0,W,H);
 
   // Sky
-  const sky = mtnX.createLinearGradient(0,0,0,H);
-  sky.addColorStop(0,'#030810'); sky.addColorStop(1,'#0a1e38');
-  mtnX.fillStyle=sky; mtnX.fillRect(0,0,W,H);
+  const sky=mtnX.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#020810');sky.addColorStop(.6,'#0a1e38');sky.addColorStop(1,'#0d2a4a');
+  mtnX.fillStyle=sky;mtnX.fillRect(0,0,W,H);
 
   // Stars
-  mtnX.fillStyle='rgba(255,255,255,.5)';
-  for(let i=0;i<25;i++){mtnX.beginPath();mtnX.arc((i*173)%W,(i*89)%(H*.55),1,0,Math.PI*2);mtnX.fill();}
+  mtnX.fillStyle='rgba(255,255,255,.55)';
+  for(let i=0;i<40;i++){mtnX.beginPath();mtnX.arc((i*173+7)%W,(i*89+11)%(H*.55),i%5===0?1.5:1,0,Math.PI*2);mtnX.fill();}
 
-  // Mountain
-  mtnX.fillStyle='#12304a';
-  mtnX.beginPath();
-  mtnX.moveTo(0,H);
-  mtnX.lineTo(W*.1,H*.72); mtnX.lineTo(W*.3,H*.82);
-  mtnX.lineTo(W*.5,H*.08); // peak
-  mtnX.lineTo(W*.7,H*.78); mtnX.lineTo(W*.9,H*.68);
-  mtnX.lineTo(W,H); mtnX.closePath(); mtnX.fill();
+  // Back mountain
+  mtnX.fillStyle='#07141f';
+  mtnX.beginPath();mtnX.moveTo(0,H);mtnX.lineTo(W*.15,H*.72);mtnX.lineTo(W*.35,H*.52);mtnX.lineTo(W*.5,H*.68);mtnX.lineTo(W*.65,H*.5);mtnX.lineTo(W*.85,H*.68);mtnX.lineTo(W,H);mtnX.closePath();mtnX.fill();
 
-  // Snow
-  mtnX.fillStyle='#ddf0ff';
-  mtnX.beginPath();
-  mtnX.moveTo(W*.43,H*.26); mtnX.lineTo(W*.5,H*.08); mtnX.lineTo(W*.57,H*.26);
-  mtnX.closePath(); mtnX.fill();
+  // Main mountain
+  const peakX=W*.5, peakY=H*.07;
+  mtnX.fillStyle='#0e2a44';
+  mtnX.beginPath();mtnX.moveTo(0,H);mtnX.lineTo(W*.08,H*.68);mtnX.lineTo(W*.22,H*.82);mtnX.lineTo(W*.38,H*.44);mtnX.lineTo(peakX,peakY);mtnX.lineTo(W*.62,H*.41);mtnX.lineTo(W*.78,H*.78);mtnX.lineTo(W*.92,H*.65);mtnX.lineTo(W,H);mtnX.closePath();mtnX.fill();
 
-  // Get km
-  const km = (typeof getMountainKmPerChar==='function')
-    ? getMountainKmPerChar(window._selMode||'showdown', window._selCls||'surfer')
-    : 0;
-  const pct = Math.min(1, km/100);
+  // Snow cap
+  mtnX.fillStyle='#eef6ff';
+  mtnX.beginPath();mtnX.moveTo(peakX-W*.015,peakY+H*.2);mtnX.lineTo(peakX,peakY);mtnX.lineTo(peakX+W*.015,peakY+H*.2);mtnX.closePath();mtnX.fill();
 
-  // Flag position along mountain slope
-  const flagX = W*.5 + Math.sin(pct*Math.PI)*W*.06;
-  const flagY = H*.08 + (1-pct)*(H*.72-H*.08);
+  // KM & flag
+  const km=(typeof getMountainKmPerChar==='function')?getMountainKmPerChar(window._selMode||'showdown',window._selCls||'surfer'):0;
+  const pct=Math.min(1,km/100);
 
-  // Path line
-  mtnX.strokeStyle='rgba(240,192,60,.5)'; mtnX.lineWidth=1.5; mtnX.setLineDash([4,4]);
-  mtnX.beginPath(); mtnX.moveTo(W*.25,H*.8);
-  mtnX.bezierCurveTo(W*.35,H*.55,W*.44,H*.35,flagX,flagY);
-  mtnX.stroke(); mtnX.setLineDash([]);
+  // Flag travels from bottom of mountain (0%) to peak (100%)
+  const baseX=peakX, baseY=H*.9;  // start = bottom
+  const topX=peakX,  topY=peakY+H*.1; // end = near peak
+
+  // Interpolate flag position
+  const flagX=baseX+(topX-baseX)*pct;
+  const flagY=baseY+(topY-baseY)*pct;
+
+  // Dotted path line (from base to flag current pos)
+  mtnX.strokeStyle='rgba(240,192,60,.6)';mtnX.lineWidth=1.5;mtnX.setLineDash([5,5]);
+  mtnX.beginPath();mtnX.moveTo(baseX,baseY);
+  mtnX.bezierCurveTo(baseX-W*.04,baseY-H*.15,topX+W*.02,topY+H*.2,flagX,flagY);
+  mtnX.stroke();mtnX.setLineDash([]);
+
+  // Base dot
+  mtnX.fillStyle='rgba(240,192,60,.4)';mtnX.beginPath();mtnX.arc(baseX,baseY,5,0,Math.PI*2);mtnX.fill();
 
   // Flag
-  mtnX.save(); mtnX.translate(flagX,flagY);
-  mtnX.fillStyle='#ccc'; mtnX.fillRect(-1,-16,2,16);
+  mtnX.save();mtnX.translate(flagX,flagY);
+  mtnX.fillStyle='#ccc';mtnX.fillRect(-1,-22,2,22);
   mtnX.fillStyle=km>=100?'#f0c040':'#ff3333';
-  mtnX.beginPath(); mtnX.moveTo(0,-16); mtnX.lineTo(10,-11); mtnX.lineTo(0,-6); mtnX.closePath(); mtnX.fill();
-  mtnX.restore();
+  if(km>=100){mtnX.shadowColor='#f0c040';mtnX.shadowBlur=14;}
+  mtnX.beginPath();mtnX.moveTo(0,-22);mtnX.lineTo(15,-15);mtnX.lineTo(0,-8);mtnX.closePath();mtnX.fill();
+  mtnX.shadowBlur=0;mtnX.restore();
 
-  // Update info below canvas
-  const zone = (typeof getZone==='function') ? getZone(km) : {icon:'⛺',name:'Base Camp',min:0,max:10};
-  document.getElementById('mtn-zone').textContent = zone.icon+' '+zone.name;
-  document.getElementById('mtn-km').textContent = km.toFixed(1)+' km';
-  const zMax = zone.max===999 ? Math.max(km+10,110) : zone.max;
-  const inZone = Math.max(0,Math.min(100,((km-zone.min)/(zMax-zone.min))*100));
-  document.getElementById('mtn-bar-fill').style.width = inZone+'%';
-  document.getElementById('mtn-bar-txt').textContent = km.toFixed(1)+' / 100 km';
+  // Labels
+  mtnX.fillStyle='rgba(255,255,255,.2)';mtnX.font='bold 10px Segoe UI';mtnX.textAlign='center';
+  mtnX.fillText('BASE',baseX,baseY+14);
+  mtnX.fillText('SUMMIT',peakX,peakY-6);
+
+  // Update info overlay
+  const zone=(typeof getZone==='function')?getZone(km):{icon:'⛺',name:'Base Camp',min:0,max:10};
+  document.getElementById('mtn-zone').textContent=zone.icon+' '+zone.name;
+  document.getElementById('mtn-km').textContent=km.toFixed(1)+' km';
+  document.getElementById('mtn-bar-fill').style.width=Math.min(100,(km/100)*100)+'%';
+  document.getElementById('mtn-bar-txt').textContent=km.toFixed(1)+' / 100 km';
 }
 
-function refreshMenu() {
-  if(typeof getMountainKmPerChar!=='function') return;
-  const cls = window._selCls||'surfer';
-  const mode = window._selMode||'showdown';
-
-  // Char km labels
+function refreshMenu(){
+  if(typeof getMountainKmPerChar!=='function')return;
+  const cls=window._selCls||'surfer',mode=window._selMode||'showdown';
   ['surfer','soldier','mage','tank'].forEach(c=>{
     const km=getMountainKmPerChar(mode,c);
-    const z=getZone(km);
-    const el=document.getElementById('ckm-'+c);
-    if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
+    const z=(typeof getZone==='function')?getZone(km):{icon:'⛺'};
+    const el=document.getElementById('ckm-'+c);if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
   });
-
-  // Mode km labels
   ['showdown','snowball'].forEach(m=>{
-    const km=getMountainKm(m);
-    const z=getZone(km);
-    const el=document.getElementById('mkm-'+m);
-    if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
+    const km=(typeof getMountainKm==='function')?getMountainKm(m):0;
+    const z=(typeof getZone==='function')?getZone(km):{icon:'⛺'};
+    const el=document.getElementById('mkm-'+m);if(el)el.textContent=z.icon+' '+km.toFixed(1)+' km';
   });
-
-  // User badge
   if(window.currentUser){
-    document.getElementById('user-name').textContent=currentUser.username;
-    document.getElementById('pp-name').textContent=currentUser.username;
+    document.getElementById('user-name').textContent=window.currentUser.username;
+    document.getElementById('pp-name').textContent=window.currentUser.username;
     const km=getMountainKmPerChar(mode,cls);
-    const z=getZone(km);
+    const z=(typeof getZone==='function')?getZone(km):{icon:'⛺',name:'Base Camp'};
     document.getElementById('user-zone').textContent=z.icon+' '+z.name;
   }
-
   drawMtn();
 }
 
-// Click handlers
 document.querySelectorAll('.char-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.char-btn').forEach(b=>b.classList.remove('sel'));
     btn.classList.add('sel');
     window._selCls=btn.dataset.cls;
-    if(typeof selectedClass!=='undefined') window.selectedClass=btn.dataset.cls;
+    window.selectedClass=btn.dataset.cls;
     refreshMenu();
   });
 });
-
 document.querySelectorAll('.mode-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('sel'));
     btn.classList.add('sel');
     window._selMode=btn.dataset.mode;
-    if(typeof selectedMode!=='undefined') window.selectedMode=btn.dataset.mode;
+    window.selectedMode=btn.dataset.mode;
     refreshMenu();
   });
 });
-
 document.getElementById('btn-profile').addEventListener('click',()=>{
   const p=document.getElementById('profile-panel');
-  const isOpen=p.style.display==='flex';
-  p.style.display=isOpen?'none':'flex';
-  if(!isOpen && typeof updateProfileUI==='function') { updateProfileUI(); updateProfileMountains(); }
+  const open=p.style.display==='flex';
+  p.style.display=open?'none':'flex';
+  if(!open&&typeof updateProfileUI==='function'){updateProfileUI();updateProfileMountains();}
 });
-document.getElementById('btn-close-pp').addEventListener('click',()=>{
-  document.getElementById('profile-panel').style.display='none';
-});
+document.getElementById('btn-close-pp').addEventListener('click',()=>{document.getElementById('profile-panel').style.display='none';});
 
-// Sync globals
-window._selCls='surfer'; window._selMode='showdown';
+window._selCls='surfer';window._selMode='showdown';
 
-// Refresh every second when menu visible
-setInterval(()=>{
-  if(document.getElementById('menu-screen').classList.contains('active')) refreshMenu();
-},1000);
+// Animate mountain continuously
+function menuLoop(){
+  if(document.getElementById('menu-screen').classList.contains('active'))drawMtn();
+  requestAnimationFrame(menuLoop);
+}
+menuLoop();
+setInterval(()=>{if(document.getElementById('menu-screen').classList.contains('active'))refreshMenu();},2000);
 </script>
 </body>
 </html>
