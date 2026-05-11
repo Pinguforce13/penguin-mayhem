@@ -194,9 +194,58 @@ function initGrid(){
   [{r:4,c:4},{r:4,c:45},{r:45,c:4},{r:45,c:45},{r:24,c:24}].forEach(({r,c})=>{for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const nr=r+dr,nc=c+dc;if(nr>0&&nr<GR-1&&nc>0&&nc<GC-1){grid[nr][nc]=T_FLOOR;iceHP[nr][nc]=4;}}});
 }
 function isWall(r,c){if(r<0||r>=GR||c<0||c>=GC)return true;return grid[r][c]===T_WALL;}
-function blocked(wx,wy,rad=12){for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])if(isWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;return false;}
+// ── Fishing hole blocking
+function isFishHole(wx,wy){
+  for(const h of fishHoles){
+    const dx=h.wx-wx,dy=h.wy-wy;
+    if(Math.sqrt(dx*dx+dy*dy)<TILE*.38)return true;
+  }
+  return false;
+}
 
-// ICE
+function blocked(wx,wy,rad=12){
+  // Wall check
+  for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])
+    if(isWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;
+  // Fish hole check (can't walk into them)
+  if(isFishHole(wx,wy))return true;
+  return false;
+}
+
+function doBot(p){
+  let near=null,nd=Infinity;
+  for(const o of players){
+    if(!o.alive||o===p||(selectedMode==='snowball'&&o.isP===p.isP))continue;
+    const dx=o.wx-p.wx,dy=o.wy-p.wy,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<nd){nd=d;near=o;}
+  }
+  if(!near)return;
+
+  p.ait--;
+  if(p.ait<=0){
+    p.ait=25+Math.random()*35;
+    const dx=near.wx-p.wx,dy=near.wy-p.wy,ln=Math.sqrt(dx*dx+dy*dy)||1;
+
+    // Try to move toward target but avoid walls smartly
+    const attempts=[
+      {vx:dx/ln,vy:dy/ln},                           // direct
+      {vx:dx/ln+(Math.random()-.5)*.8,vy:dy/ln+(Math.random()-.5)*.8}, // slight wander
+      {vx:-dy/ln,vy:dx/ln},                           // strafe left
+      {vx:dy/ln,vy:-dx/ln},                           // strafe right
+    ];
+    for(const a of attempts){
+      const vl=Math.sqrt(a.vx*a.vx+a.vy*a.vy)||1;
+      const tvx=a.vx/vl, tvy=a.vy/vl;
+      const testX=p.wx+tvx*TILE*.5, testY=p.wy+tvy*TILE*.5;
+      if(!blocked(testX,testY,PR*.8)){p.vx=tvx;p.vy=tvy;break;}
+    }
+  }
+
+  const dx=near.wx-p.wx,dy=near.wy-p.wy;
+  // Aim with slight inaccuracy — bots are bad
+  p.angle=Math.atan2(dy,dx)+(Math.random()-.5)*.6;
+  if(nd<TILE*4.5&&p.cd===0&&p.ammo>0&&Math.random()<.55)shoot(p);
+}
 let iceTimer=0,iceRing=1,icePhase=0,icePhaseTimer=0;
 const ICE_GRACE=60*14,ICE_TREMOR=60*3,ICE_BREAK=60*1,ICE_NEXT=60*5,ICE_MAX=Math.floor(GR/2)-2;
 function initIce(){iceTimer=0;iceRing=1;icePhase=0;icePhaseTimer=ICE_GRACE;}
@@ -436,7 +485,7 @@ function update(ts){
   for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;if(p.g)p.vy+=p.g;else{p.vx*=.91;p.vy*=.91;}p.life--;}
   parts=parts.filter(p=>p.life>0);
   updateHUD();
-  if(Math.floor(ts/50)%3===0)drawMM();
+  if(Math.floor(lt/100)%2===0)drawMM(); // minimap every ~100ms
 
   if(selectedMode==='showdown'){
     const alive=players.filter(p=>p.alive);
@@ -456,13 +505,7 @@ function doInput(p){
   if(K['Space']&&p.cd===0&&p.ammo>0)shoot(p);
 }
 
-function doBot(p){
-  let near=null,nd=Infinity;
-  for(const o of players){if(!o.alive||o===p||(selectedMode==='snowball'&&o.isP===p.isP))continue;const dx=o.wx-p.wx,dy=o.wy-p.wy,d=Math.sqrt(dx*dx+dy*dy);if(d<nd){nd=d;near=o;}}
-  p.ait--;
-  if(p.ait<=0){p.ait=35+Math.random()*45;if(near){const dx=near.wx-p.wx,dy=near.wy-p.wy,ln=Math.sqrt(dx*dx+dy*dy)||1;p.vx=dx/ln+(Math.random()-.5)*1.2;p.vy=dy/ln+(Math.random()-.5)*1.2;const vl=Math.sqrt(p.vx*p.vx+p.vy*p.vy)||1;p.vx/=vl;p.vy/=vl;}}
-  if(near){const dx=near.wx-p.wx,dy=near.wy-p.wy;p.angle=Math.atan2(dy,dx)+(Math.random()-.5)*.5;if(nd<TILE*4&&p.cd===0&&p.ammo>0&&Math.random()<.6)shoot(p);}
-}
+// ICE
 
 function shoot(p){
   if(p.ammo<=0)return;
@@ -500,26 +543,137 @@ function killP(p){p.alive=false;p.hp=0;deathFx(p.wx,p.wy,p.col);if(selectedMode=
 function doWin(){if(!currentUser)return;currentUser.wins[selectedClass]=(currentUser.wins[selectedClass]||0)+1;const st=(currentUser.streak||0)+1;currentUser.streak=st;addMountainKm(selectedMode,selectedClass,1+(st>=3?.5:0));}
 function doLoss(){if(!currentUser)return;currentUser.streak=0;addMountainKm(selectedMode,selectedClass,-0.5);}
 
+// Pre-computed per-tile variation (so each tile looks slightly different)
+let tileVar=[];
+function buildTileVar(){
+  tileVar=[];
+  for(let r=0;r<GR;r++){tileVar[r]=[];for(let c=0;c<GC;c++){
+    // Random offsets baked in per tile — organic imperfection
+    tileVar[r][c]={
+      // corner offsets: each corner of the tile shifts slightly
+      tl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+      tr:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+      bl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+      br:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+      // surface variation
+      bright: .88+Math.random()*.24,
+      scratch: Math.random()>.6,  // subtle surface scratches
+      scratchA: Math.random()*Math.PI,
+      scratchL: 8+Math.random()*20,
+    };
+  }}
+}
+
 // DRAW
 function draw(){
-  ctx.fillStyle='#060e1e';ctx.fillRect(0,0,SW,SH);
+  ctx.fillStyle='#0a1e30';ctx.fillRect(0,0,SW,SH);
   const sC=Math.max(0,Math.floor(camX/TILE)-1),eC=Math.min(GC,Math.ceil((camX+SW)/TILE)+1);
   const sR=Math.max(0,Math.floor(camY/TILE)-1),eR=Math.min(GR,Math.ceil((camY+SH)/TILE)+1);
   const wt=Date.now()*.001;
+  // Slow tile wobble — tiles breathe very slightly
+  const wobble=Math.sin(wt*.4)*.4;
 
   for(let r=sR;r<eR;r++)for(let c=sC;c<eC;c++){
     const hp=iceHP[r][c],cell=grid[r][c],tr=iceTremor[r][c];
-    const shk=tr>0?(Math.random()-.5)*(tr>ICE_TREMOR*.5?4:2):0;
-    const{x,y}=toScreen(c*TILE+shk,r*TILE+shk*.5);
-    if(cell===T_WALL){ctx.fillStyle='#2a3e5a';ctx.fillRect(x,y,TILE,TILE);ctx.fillStyle='#3a5272';ctx.fillRect(x+2,y+2,TILE-4,Math.floor(TILE*.48));ctx.fillStyle='#18283c';ctx.fillRect(x,y+TILE-5,TILE,5);ctx.strokeStyle='#1a2a3e';ctx.lineWidth=1;ctx.strokeRect(x,y,TILE,TILE);}
-    else if(hp<=0){const w=Math.sin(wt*1.2+r*.8+c*.6);ctx.fillStyle='#06121e';ctx.fillRect(x,y,TILE,TILE);ctx.fillStyle=`rgba(15,55,110,${.2+w*.06})`;ctx.fillRect(x+2,y+Math.floor(TILE*.22),TILE-4,4);ctx.strokeStyle='rgba(15,50,90,.35)';ctx.lineWidth=.5;ctx.strokeRect(x,y,TILE,TILE);}
+    const tv=tileVar[r]?tileVar[r][c]:{tl:{x:0,y:0},tr:{x:0,y:0},bl:{x:0,y:0},br:{x:0,y:0},bright:1,scratch:false};
+
+    // Tremor shake
+    const shk=tr>0?(Math.random()-.5)*(tr>ICE_TREMOR*.5?5:2):0;
+    const bx=Math.round(c*TILE-camX+shk);
+    const by=Math.round(r*TILE-camY+shk*.5);
+
+    if(cell===T_WALL){
+      // Wall — stone blocks with slight depth variation
+      const dark=`rgba(${20+Math.floor(tv.bright*8)},${38+Math.floor(tv.bright*10)},${58+Math.floor(tv.bright*12)},1)`;
+      ctx.fillStyle=dark;ctx.fillRect(bx,by,TILE,TILE);
+      ctx.fillStyle='#3a5272';ctx.fillRect(bx+2,by+2,TILE-4,Math.floor(TILE*.46));
+      // Top highlight
+      ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(bx+2,by+2,TILE-4,3);
+      // Bottom shadow
+      ctx.fillStyle='#18283c';ctx.fillRect(bx,by+TILE-5,TILE,5);
+      ctx.strokeStyle='#142038';ctx.lineWidth=1;ctx.strokeRect(bx,by,TILE,TILE);
+    }
+    else if(hp<=0){
+      // Dark water — animated ripples
+      const wave=Math.sin(wt*1.1+r*.7+c*.5+wobble);
+      const wave2=Math.sin(wt*1.7+r*.4+c*.9);
+      ctx.fillStyle='#05101a';ctx.fillRect(bx,by,TILE,TILE);
+      // Ripple lines
+      ctx.fillStyle=`rgba(10,45,90,${.18+wave*.07})`;
+      ctx.fillRect(bx+3,by+Math.floor(TILE*.2),TILE-6,3);
+      ctx.fillStyle=`rgba(10,45,90,${.12+wave2*.05})`;
+      ctx.fillRect(bx+6,by+Math.floor(TILE*.55),TILE-12,2);
+      ctx.strokeStyle='rgba(10,40,80,.3)';ctx.lineWidth=.5;ctx.strokeRect(bx,by,TILE,TILE);
+    }
     else{
-      const iceC=['#b0d4ee','#cce4f6','#e2f2fc','#f2faff'];ctx.fillStyle=iceC[hp-1]||'#f2faff';ctx.fillRect(x,y,TILE,TILE);
-      ctx.fillStyle='rgba(255,255,255,.36)';ctx.fillRect(x+1,y+1,TILE-2,Math.floor(TILE*.2));
-      if(hp<=3){ctx.strokeStyle=`rgba(70,120,170,${hp<=1?.8:hp<=2?.55:.3})`;ctx.lineWidth=hp<=1?2:hp<=2?1.2:.8;ctx.beginPath();ctx.moveTo(x+8,y+12);ctx.lineTo(x+24,y+22);ctx.moveTo(x+24,y+22);ctx.lineTo(x+18,y+36);if(hp<=2){ctx.moveTo(x+32,y+8);ctx.lineTo(x+18,y+26);}if(hp<=1){ctx.moveTo(x+2,y+2);ctx.lineTo(x+TILE-2,y+TILE-2);}ctx.stroke();}
-      if(tr>ICE_TREMOR*.55){const g=(tr-ICE_TREMOR*.55)/(ICE_TREMOR*.45);ctx.fillStyle=`rgba(255,100,30,${g*.35})`;ctx.fillRect(x,y,TILE,TILE);}
-      ctx.strokeStyle='rgba(180,220,255,.2)';ctx.lineWidth=.5;ctx.strokeRect(x,y,TILE,TILE);
-      if(selectedMode==='snowball'&&paintGrid[r][c]!==0){ctx.fillStyle=paintGrid[r][c]===1?'rgba(40,100,220,.38)':'rgba(220,40,40,.38)';ctx.fillRect(x,y,TILE,TILE);}
+      // ICE FLOOR — organic, varied, slightly breathing
+      // Base color varies per tile
+      const iceBase=['#a8ccde','#bcd8e8','#d0e8f4','#e4f2fa'];
+      const base=iceBase[hp-1]||'#e4f2fa';
+
+      // Draw as slightly irregular quadrilateral (organic corners)
+      // Very subtle per-tile wobble
+      const wb=wobble*.3;
+      const tlx=bx+tv.tl.x+wb, tly=by+tv.tl.y+wb;
+      const trx=bx+TILE+tv.tr.x-wb, try_=by+tv.tr.y+wb;
+      const blx=bx+tv.bl.x+wb, bly=by+TILE+tv.bl.y-wb;
+      const brx=bx+TILE+tv.br.x-wb, bry=by+TILE+tv.br.y-wb;
+
+      ctx.beginPath();
+      ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);
+      ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);
+      ctx.closePath();
+      ctx.fillStyle=base;ctx.fill();
+
+      // Surface brightness variation
+      ctx.globalAlpha=tv.bright*.18;
+      ctx.fillStyle='#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);
+      ctx.lineTo(brx-2,bry-TILE*.7);ctx.lineTo(tlx+2,tly+TILE*.25);
+      ctx.closePath();ctx.fill();
+      ctx.globalAlpha=1;
+
+      // Subtle surface scratches (random per tile, always there)
+      if(tv.scratch){
+        ctx.save();
+        ctx.strokeStyle=`rgba(80,130,170,${.12*tv.bright})`;
+        ctx.lineWidth=.6;
+        const sx=bx+TILE*.2+Math.cos(tv.scratchA)*tv.scratchL;
+        const sy=by+TILE*.3+Math.sin(tv.scratchA)*tv.scratchL;
+        ctx.beginPath();ctx.moveTo(bx+TILE*.2,by+TILE*.3);ctx.lineTo(sx,sy);ctx.stroke();
+        ctx.restore();
+      }
+
+      // Damage cracks
+      if(hp<=3){
+        ctx.strokeStyle=`rgba(60,110,160,${hp<=1?.75:hp<=2?.5:.28})`;
+        ctx.lineWidth=hp<=1?1.8:hp<=2?1.2:.7;
+        ctx.beginPath();
+        ctx.moveTo(bx+9,by+11);ctx.lineTo(bx+23,by+23);ctx.moveTo(bx+23,by+23);ctx.lineTo(bx+17,by+38);
+        if(hp<=2){ctx.moveTo(bx+31,by+7);ctx.lineTo(bx+17,by+27);}
+        if(hp<=1){ctx.moveTo(bx+3,by+3);ctx.lineTo(bx+TILE-3,by+TILE-3);ctx.moveTo(bx+TILE-3,by+3);ctx.lineTo(bx+3,by+TILE-3);}
+        ctx.stroke();
+      }
+
+      // Warning glow when about to break
+      if(tr>ICE_TREMOR*.5){
+        const g=(tr-ICE_TREMOR*.5)/(ICE_TREMOR*.5);
+        ctx.fillStyle=`rgba(255,90,20,${g*.3})`;
+        ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.fill();
+      }
+
+      // Very subtle tile edge (not a hard grid line)
+      ctx.strokeStyle='rgba(160,210,235,.12)';ctx.lineWidth=.4;
+      ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.stroke();
+
+      // Snowball paint
+      if(selectedMode==='snowball'&&paintGrid[r][c]!==0){
+        ctx.globalAlpha=.4;
+        ctx.fillStyle=paintGrid[r][c]===1?'#2860d0':'#d03020';
+        ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.fill();
+        ctx.globalAlpha=1;
+      }
     }
   }
 
@@ -700,7 +854,7 @@ document.getElementById('btn-play').addEventListener('click',()=>{
   document.getElementById('btn-exit').style.display='block';
   document.getElementById('result-screen').style.display='none';
   if(isMob){document.getElementById('joystick-wrap').style.display='block';document.getElementById('shoot-btn').style.display='flex';}
-  initGrid();spawnAll();initIce();initFishing();
+  initGrid();buildTileVar();spawnAll();initIce();initFishing();
   if(selectedMode==='snowball')initSB();
   const me=players[0];camX=me.wx-SW/2;camY=me.wy-SH/2;
   renderAmmo(me);running=true;
