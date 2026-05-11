@@ -338,7 +338,8 @@ const mtnX = mtnC.getContext('2d');
 
 function resizeMtn(){
   const p=document.getElementById('mountain-mid');
-  mtnC.width=p.clientWidth; mtnC.height=p.clientHeight;
+  const w=p.clientWidth, h=p.clientHeight;
+  if(mtnC.width!==w||mtnC.height!==h){mtnC.width=w;mtnC.height=h;}
 }
 window.addEventListener('resize',resizeMtn);
 setTimeout(resizeMtn,50);
