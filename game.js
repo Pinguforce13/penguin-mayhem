@@ -193,7 +193,14 @@ function initGrid(){
   walls.forEach(({r,c})=>{if(r>0&&r<GR-1&&c>0&&c<GC-1)grid[r][c]=T_WALL;});
   [{r:4,c:4},{r:4,c:45},{r:45,c:4},{r:45,c:45},{r:24,c:24}].forEach(({r,c})=>{for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){const nr=r+dr,nc=c+dc;if(nr>0&&nr<GR-1&&nc>0&&nc<GC-1){grid[nr][nc]=T_FLOOR;iceHP[nr][nc]=4;}}});
 }
-function isWall(r,c){if(r<0||r>=GR||c<0||c>=GC)return true;return grid[r][c]===T_WALL;}
+function isWall(r,c){
+  if(selectedMode==='snowball'){
+    if(r<0||r>=SB_ROWS||c<0||c>=SB_COLS)return true;
+    return sbGrid[r][c]===T_WALL;
+  }
+  if(r<0||r>=GR||c<0||c>=GC)return true;
+  return grid[r][c]===T_WALL;
+}
 // ── Fishing hole blocking
 function isFishHole(wx,wy){
   for(const h of fishHoles){
@@ -274,20 +281,188 @@ function ringBreak(ring){for(let r=ring;r<GR-ring;r++)for(let c=ring;c<GC-ring;c
 function iceFx(r,c){const wx=(c+.5)*TILE,wy=(r+.5)*TILE;for(let i=0;i<8;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*3;parts.push({wx:wx+(Math.random()-.5)*TILE*.5,wy:wy+(Math.random()-.5)*TILE*.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:18+Math.random()*18,ml:36,sz:3+Math.random()*5,col:'#cce8ff'});}}
 function splash(wx,wy){for(let i=0;i<12;i++){const a=(i/12)*Math.PI*2,s=2+Math.random()*3;parts.push({wx,wy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:20+Math.random()*15,ml:35,sz:3+Math.random()*4,col:'#5ac8fa'});}}
 
-// SNOWBALL
-let sbTimer=0;
-function initSB(){sbTimer=60*90;paintGrid.forEach(r=>r.fill(0));}
-function paintTile(wx,wy,team){const r=Math.floor(wy/TILE),c=Math.floor(wx/TILE);if(r<0||r>=GR||c<0||c>=GC||grid[r][c]===T_WALL)return;paintGrid[r][c]=team;}
-function getScores(){let b=0,r=0,t=0;for(let rr=0;rr<GR;rr++)for(let cc=0;cc<GC;cc++){if(grid[rr][cc]===T_WALL)continue;t++;if(paintGrid[rr][cc]===1)b++;else if(paintGrid[rr][cc]===2)r++;}return{b,r,t,bp:Math.round(b/t*100),rp:Math.round(r/t*100)};}
+// ══════════════════════════════════════════
+//  SNOWBALL MAP — separate smaller grid
+// ══════════════════════════════════════════
+const SB_ROWS=30, SB_COLS=20; // vertical rectangle, taller than wide
+let sbGrid=[], sbPaint=[], sbTileVar=[];
+
+function initSBMap(){
+  sbGrid=[]; sbPaint=[]; sbTileVar=[];
+  for(let r=0;r<SB_ROWS;r++){
+    sbGrid[r]=[]; sbPaint[r]=[]; sbTileVar[r]=[];
+    for(let c=0;c<SB_COLS;c++){
+      const wall=r===0||r===SB_ROWS-1||c===0||c===SB_COLS-1;
+      sbGrid[r][c]=wall?T_WALL:T_FLOOR;
+      sbPaint[r][c]=0;
+      sbTileVar[r][c]={
+        tl:{x:(Math.random()-.5)*3,y:(Math.random()-.5)*3},
+        tr:{x:(Math.random()-.5)*3,y:(Math.random()-.5)*3},
+        bl:{x:(Math.random()-.5)*3,y:(Math.random()-.5)*3},
+        br:{x:(Math.random()-.5)*3,y:(Math.random()-.5)*3},
+        bright:.88+Math.random()*.24,
+        scratch:Math.random()>.6,
+        scratchA:Math.random()*Math.PI,
+        scratchL:6+Math.random()*14,
+      };
+    }
+  }
+
+  // Brawl Stars style walls — symmetric top/bottom with cover in middle
+  // Using wall blocks: [r, c] pairs — mirrored vertically
+  const wallDefs=[
+    // Side walls middle
+    {r:7,  c:1},{r:7,  c:2},
+    {r:8,  c:1},
+    {r:7,  c:17},{r:7, c:18},
+    {r:8,  c:18},
+    // Center horizontal cover
+    {r:14, c:5},{r:14, c:6},{r:14,c:7},
+    {r:14, c:12},{r:14,c:13},{r:14,c:14},
+    // Diagonal clusters top
+    {r:4,  c:5},{r:5,  c:5},{r:5, c:6},
+    {r:4,  c:13},{r:5, c:13},{r:5,c:14},
+    // T-shaped center top
+    {r:9,  c:8},{r:9,  c:9},{r:9, c:10},{r:9,c:11},
+    {r:10, c:9},{r:10, c:10},
+    // Diagonal clusters bottom (mirrored)
+    {r:24, c:5},{r:25, c:5},{r:25,c:6},
+    {r:24, c:13},{r:25,c:13},{r:25,c:14},
+    // Side walls bottom (mirrored)
+    {r:21, c:1},{r:21, c:2},
+    {r:22, c:1},
+    {r:21, c:17},{r:21,c:18},
+    {r:22, c:18},
+    // T-shaped center bottom (mirrored)
+    {r:19, c:8},{r:19, c:9},{r:19,c:10},{r:19,c:11},
+    {r:20, c:9},{r:20, c:10},
+    // Small boxes corners
+    {r:2,c:3},{r:2,c:4},
+    {r:2,c:15},{r:2,c:16},
+    {r:27,c:3},{r:27,c:4},
+    {r:27,c:15},{r:27,c:16},
+  ];
+  wallDefs.forEach(({r,c})=>{
+    if(r>0&&r<SB_ROWS-1&&c>0&&c<SB_COLS-1) sbGrid[r][c]=T_WALL;
+  });
+
+  // Clear spawn zones — blue top, red bottom
+  [[2,2],[2,3],[3,2],[3,3]].forEach(([r,c])=>{sbGrid[r][c]=T_FLOOR;});               // blue spawn
+  [[SB_ROWS-3,2],[SB_ROWS-3,3],[SB_ROWS-4,2],[SB_ROWS-4,3]].forEach(([r,c])=>{sbGrid[r][c]=T_FLOOR;}); // red spawn
+}
+
+function isSBWall(r,c){if(r<0||r>=SB_ROWS||c<0||c>=SB_COLS)return true;return sbGrid[r][c]===T_WALL;}
+function sbBlocked(wx,wy,rad=12){
+  for(const{dx,dy}of[{dx:-rad,dy:-rad},{dx:rad,dy:-rad},{dx:-rad,dy:rad},{dx:rad,dy:rad}])
+    if(isSBWall(Math.floor((wy+dy)/TILE),Math.floor((wx+dx)/TILE)))return true;
+  return false;
+}
+
+// ══════════════════════════════════════════
+//  SNOWBALL TIMER + OVERTIME
+// ══════════════════════════════════════════
+let sbTimer=0, sbOvertime=false, sbOvertimeShow=0;
+const SB_FULL=60*120; // 2 minutes
+const SB_OT  =60*15;  // 15 seconds overtime
+
+function initSB(){
+  sbTimer=SB_FULL; sbOvertime=false; sbOvertimeShow=0;
+  if(selectedMode==='snowball'){
+    // Use SB grid as active grid
+    grid=sbGrid; paintGrid=sbPaint;
+    // Reset paint
+    for(let r=0;r<SB_ROWS;r++) sbPaint[r].fill(0);
+  }
+}
+
+function paintTile(wx,wy,team){
+  if(selectedMode==='snowball'){
+    const r=Math.floor(wy/TILE),c=Math.floor(wx/TILE);
+    if(r<0||r>=SB_ROWS||c<0||c>=SB_COLS||sbGrid[r][c]===T_WALL)return;
+    sbPaint[r][c]=team;
+  } else {
+    const r=Math.floor(wy/TILE),c=Math.floor(wx/TILE);
+    if(r<0||r>=GR||c<0||c>=GC||grid[r][c]===T_WALL)return;
+    paintGrid[r][c]=team;
+  }
+}
+
+function getScores(){
+  let b=0,r=0,t=0;
+  const rows=selectedMode==='snowball'?SB_ROWS:GR;
+  const cols=selectedMode==='snowball'?SB_COLS:GC;
+  const g=selectedMode==='snowball'?sbGrid:grid;
+  const p=selectedMode==='snowball'?sbPaint:paintGrid;
+  for(let rr=0;rr<rows;rr++) for(let cc=0;cc<cols;cc++){
+    if(g[rr][cc]===T_WALL)continue;
+    t++;
+    if(p[rr][cc]===1)b++;
+    else if(p[rr][cc]===2)r++;
+  }
+  return{b,r,t,bp:Math.round(b/t*100),rp:Math.round(r/t*100),total:Math.round((b+r)/t*100)};
+}
+
 function updateSB(){
   if(selectedMode!=='snowball')return;
   sbTimer--;
+  if(sbOvertimeShow>0) sbOvertimeShow--;
+
+  // Paint tiles under all living players
   for(const p of players){if(!p.alive)continue;paintTile(p.wx,p.wy,p.isP?1:2);}
-  const{bp,rp}=getScores();
+
+  const{bp,rp,total}=getScores();
+
+  // Update HUD
   document.getElementById('hud-sb-b').textContent='🔵 '+bp+'%';
   document.getElementById('hud-sb-r').textContent='🔴 '+rp+'%';
-  document.getElementById('hud-alive-n').textContent=Math.ceil(sbTimer/60);
-  if(sbTimer<=0){running=false;const won=bp>rp;if(won)doWin();else doLoss();setTimeout(()=>showResult(won),600);}
+
+  // Timer display
+  const secLeft=Math.max(0,Math.ceil(sbTimer/60));
+  const min=Math.floor(secLeft/60), sec=secLeft%60;
+  document.getElementById('hud-alive-n').textContent=
+    (sbOvertime?'OT ':'')+min+':'+(sec<10?'0':'')+sec;
+  document.getElementById('hud-alive-l').textContent=sbOvertime?'OVERTIME':'tijd';
+
+  // Win if 100% painted before timer
+  if(total>=100&&running){
+    endSB(bp,rp);return;
+  }
+
+  // Timer runs out
+  if(sbTimer<=0&&running){
+    if(bp===rp&&!sbOvertime){
+      // OVERTIME!
+      sbOvertime=true;
+      sbTimer=SB_OT;
+      sbOvertimeShow=120; // show "+15" for 2 seconds
+    } else {
+      endSB(bp,rp);
+    }
+  }
+}
+
+function endSB(bp,rp){
+  running=false;
+  const won=bp>rp;
+  if(won)doWin();else doLoss();
+  setTimeout(()=>showResult(won),600);
+}
+
+// Draw "+15" overtime overlay on canvas
+function drawSBOverlay(){
+  if(sbOvertimeShow>0){
+    const alpha=Math.min(1,sbOvertimeShow/30);
+    const scale=1+Math.max(0,(sbOvertimeShow-90)/30)*.4;
+    ctx.save();
+    ctx.translate(SW/2,SH/2);ctx.scale(scale,scale);
+    ctx.fillStyle=`rgba(240,192,60,${alpha})`;
+    ctx.font='bold 72px Segoe UI';ctx.textAlign='center';
+    ctx.shadowColor='#f0c040';ctx.shadowBlur=30;
+    ctx.fillText('+15',0,0);
+    ctx.font='bold 24px Segoe UI';ctx.fillStyle=`rgba(255,255,255,${alpha})`;
+    ctx.shadowBlur=10;ctx.fillText('OVERTIME!',0,44);
+    ctx.restore();
+  }
 }
 
 // PARTICLES
@@ -421,12 +596,35 @@ const PR=14;
 
 function spawnAll(){
   players=[];bullets=[];
-  const sp=[{wx:4.5*TILE,wy:4.5*TILE},{wx:45.5*TILE,wy:4.5*TILE},{wx:4.5*TILE,wy:45.5*TILE},{wx:45.5*TILE,wy:45.5*TILE},{wx:24.5*TILE,wy:24.5*TILE}];
+  let sp;
+  if(selectedMode==='snowball'){
+    // Blue team top, red team bottom — multiple spawn spots
+    sp=[
+      {wx:2.5*TILE,wy:2.5*TILE},   // player (blue)
+      {wx:SB_COLS-2.5,wy:SB_ROWS-2.5},  // bot1 red
+      {wx:SB_COLS-3.5,wy:SB_ROWS-2.5},  // bot2 red
+      {wx:SB_COLS-2.5,wy:SB_ROWS-3.5},  // bot3 red
+      {wx:3.5*TILE,wy:2.5*TILE},   // bot4 blue (doesn't matter — bots fight each other anyway)
+    ];
+    // Convert row/col to world coords for non-TILE entries
+    sp[1]={wx:(SB_COLS-2.5)*TILE, wy:(SB_ROWS-2.5)*TILE};
+    sp[2]={wx:(SB_COLS-3.5)*TILE, wy:(SB_ROWS-2.5)*TILE};
+    sp[3]={wx:(SB_COLS-2.5)*TILE, wy:(SB_ROWS-3.5)*TILE};
+    sp[4]={wx:3.5*TILE, wy:2.5*TILE};
+  } else {
+    sp=[
+      {wx:4.5*TILE,wy:4.5*TILE},
+      {wx:45.5*TILE,wy:4.5*TILE},
+      {wx:4.5*TILE,wy:45.5*TILE},
+      {wx:45.5*TILE,wy:45.5*TILE},
+      {wx:24.5*TILE,wy:24.5*TILE},
+    ];
+  }
   const allCls=['surfer','soldier','mage','tank'].filter(c=>c!==selectedClass);
   while(allCls.length<4)allCls.push(allCls[Math.floor(Math.random()*allCls.length)]);
   [{cls:selectedClass,isP:true},{cls:allCls[0],isP:false},{cls:allCls[1],isP:false},{cls:allCls[2],isP:false},{cls:allCls[3],isP:false}].forEach((cfg,i)=>{
     const d=CLS_DEF[cfg.cls],s=sp[i];
-    players.push({wx:s.wx,wy:s.wy,vx:0,vy:0,cls:cfg.cls,isP:cfg.isP,hp:d.hp,mhp:d.hp,spd:d.spd,fr:d.fr,ammo:d.maxA,maxA:d.maxA,relT:d.relT,relCd:0,dmg:d.dmg,bspd:d.bspd,col:d.col,name:cfg.isP?'JIJ':d.name,alive:true,cd:0,inv:0,angle:Math.PI/4,frz:0,ait:0,bob:Math.random()*Math.PI*2,inWater:false,stunTimer:0,slots:[],respawn:0});
+    players.push({wx:s.wx,wy:s.wy,vx:0,vy:0,cls:cfg.cls,isP:cfg.isP,hp:d.hp,mhp:d.hp,spd:d.spd,fr:d.fr,ammo:d.maxA,maxA:d.maxA,relT:d.relT,relCd:0,dmg:d.dmg,bspd:d.bspd,col:d.col,name:cfg.isP?'JIJ':d.name,alive:true,cd:0,inv:0,angle:cfg.isP?Math.PI*.25:Math.PI*1.25,frz:0,ait:0,bob:Math.random()*Math.PI*2,inWater:false,stunTimer:0,slots:[],respawn:0});
   });
 }
 
@@ -473,13 +671,29 @@ function update(ts){
     const SPD=p.spd*2.2,nx=p.wx+p.vx*SPD,ny=p.wy+p.vy*SPD;
     if(!blocked(nx,p.wy,PR))p.wx=nx;else p.vx=0;
     if(!blocked(p.wx,ny,PR))p.wy=ny;else p.vy=0;
-    p.wx=Math.max(PR+TILE,Math.min((GC-1)*TILE-PR,p.wx));
-    p.wy=Math.max(PR+TILE,Math.min((GR-1)*TILE-PR,p.wy));
+  // (bounds clamped above)
+
     p.vx*=.78;p.vy*=.78;
   }
 
   const me=players[0];
-  if(me&&me.alive){camX+=(me.wx-SW/2-camX)*CAM_LERP;camY+=(me.wy-SH/2-camY)*CAM_LERP;camX=Math.max(0,Math.min(GC*TILE-SW,camX));camY=Math.max(0,Math.min(GR*TILE-SH,camY));}
+  const mapW=(selectedMode==='snowball'?SB_COLS:GC)*TILE;
+  const mapH=(selectedMode==='snowball'?SB_ROWS:GR)*TILE;
+  if(me&&me.alive){
+    camX+=(me.wx-SW/2-camX)*CAM_LERP;
+    camY+=(me.wy-SH/2-camY)*CAM_LERP;
+    camX=Math.max(0,Math.min(Math.max(0,mapW-SW),camX));
+    camY=Math.max(0,Math.min(Math.max(0,mapH-SH),camY));
+  }
+
+  // Clamp players to map bounds
+  const maxX=(selectedMode==='snowball'?SB_COLS-1:GC-1)*TILE-PR;
+  const maxY=(selectedMode==='snowball'?SB_ROWS-1:GR-1)*TILE-PR;
+  for(const p of players){
+    if(!p.alive)continue;
+    p.wx=Math.max(PR+TILE,Math.min(maxX,p.wx));
+    p.wy=Math.max(PR+TILE,Math.min(maxY,p.wy));
+  }
 
   updateBullets();updateIce();updateSB();updateFishing();
   for(const p of parts){p.wx+=p.vx;p.wy+=p.vy;if(p.g)p.vy+=p.g;else{p.vx*=.91;p.vy*=.91;}p.life--;}
@@ -543,143 +757,99 @@ function killP(p){p.alive=false;p.hp=0;deathFx(p.wx,p.wy,p.col);if(selectedMode=
 function doWin(){if(!currentUser)return;currentUser.wins[selectedClass]=(currentUser.wins[selectedClass]||0)+1;const st=(currentUser.streak||0)+1;currentUser.streak=st;addMountainKm(selectedMode,selectedClass,1+(st>=3?.5:0));}
 function doLoss(){if(!currentUser)return;currentUser.streak=0;addMountainKm(selectedMode,selectedClass,-0.5);}
 
-// Pre-computed per-tile variation (so each tile looks slightly different)
-let tileVar=[];
-function buildTileVar(){
-  tileVar=[];
-  for(let r=0;r<GR;r++){tileVar[r]=[];for(let c=0;c<GC;c++){
-    // Random offsets baked in per tile — organic imperfection
-    tileVar[r][c]={
-      // corner offsets: each corner of the tile shifts slightly
-      tl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
-      tr:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
-      bl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
-      br:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
-      // surface variation
-      bright: .88+Math.random()*.24,
-      scratch: Math.random()>.6,  // subtle surface scratches
-      scratchA: Math.random()*Math.PI,
-      scratchL: 8+Math.random()*20,
-    };
-  }}
-}
-
-// DRAW
 function draw(){
   ctx.fillStyle='#0a1e30';ctx.fillRect(0,0,SW,SH);
-  const sC=Math.max(0,Math.floor(camX/TILE)-1),eC=Math.min(GC,Math.ceil((camX+SW)/TILE)+1);
-  const sR=Math.max(0,Math.floor(camY/TILE)-1),eR=Math.min(GR,Math.ceil((camY+SH)/TILE)+1);
+
+  const ROWS=selectedMode==='snowball'?SB_ROWS:GR;
+  const COLS=selectedMode==='snowball'?SB_COLS:GC;
+  const G=selectedMode==='snowball'?sbGrid:grid;
+  const TV=selectedMode==='snowball'?sbTileVar:tileVar;
+  const PAINT=selectedMode==='snowball'?sbPaint:paintGrid;
+
+  const sC=Math.max(0,Math.floor(camX/TILE)-1),eC=Math.min(COLS,Math.ceil((camX+SW)/TILE)+1);
+  const sR=Math.max(0,Math.floor(camY/TILE)-1),eR=Math.min(ROWS,Math.ceil((camY+SH)/TILE)+1);
   const wt=Date.now()*.001;
-  // Slow tile wobble — tiles breathe very slightly
   const wobble=Math.sin(wt*.4)*.4;
 
   for(let r=sR;r<eR;r++)for(let c=sC;c<eC;c++){
-    const hp=iceHP[r][c],cell=grid[r][c],tr=iceTremor[r][c];
-    const tv=tileVar[r]?tileVar[r][c]:{tl:{x:0,y:0},tr:{x:0,y:0},bl:{x:0,y:0},br:{x:0,y:0},bright:1,scratch:false};
+    const hp=selectedMode==='snowball'?4:iceHP[r][c];
+    const cell=G[r][c];
+    const tr=selectedMode==='snowball'?0:(iceTremor[r]?.[c]||0);
+    const tv=TV[r]?TV[r][c]:null;
+    if(!tv)continue;
 
-    // Tremor shake
     const shk=tr>0?(Math.random()-.5)*(tr>ICE_TREMOR*.5?5:2):0;
     const bx=Math.round(c*TILE-camX+shk);
     const by=Math.round(r*TILE-camY+shk*.5);
 
     if(cell===T_WALL){
-      // Wall — stone blocks with slight depth variation
       const dark=`rgba(${20+Math.floor(tv.bright*8)},${38+Math.floor(tv.bright*10)},${58+Math.floor(tv.bright*12)},1)`;
       ctx.fillStyle=dark;ctx.fillRect(bx,by,TILE,TILE);
       ctx.fillStyle='#3a5272';ctx.fillRect(bx+2,by+2,TILE-4,Math.floor(TILE*.46));
-      // Top highlight
       ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(bx+2,by+2,TILE-4,3);
-      // Bottom shadow
       ctx.fillStyle='#18283c';ctx.fillRect(bx,by+TILE-5,TILE,5);
       ctx.strokeStyle='#142038';ctx.lineWidth=1;ctx.strokeRect(bx,by,TILE,TILE);
     }
     else if(hp<=0){
-      // Dark water — animated ripples
       const wave=Math.sin(wt*1.1+r*.7+c*.5+wobble);
       const wave2=Math.sin(wt*1.7+r*.4+c*.9);
       ctx.fillStyle='#05101a';ctx.fillRect(bx,by,TILE,TILE);
-      // Ripple lines
-      ctx.fillStyle=`rgba(10,45,90,${.18+wave*.07})`;
-      ctx.fillRect(bx+3,by+Math.floor(TILE*.2),TILE-6,3);
-      ctx.fillStyle=`rgba(10,45,90,${.12+wave2*.05})`;
-      ctx.fillRect(bx+6,by+Math.floor(TILE*.55),TILE-12,2);
+      ctx.fillStyle=`rgba(10,45,90,${.18+wave*.07})`;ctx.fillRect(bx+3,by+Math.floor(TILE*.2),TILE-6,3);
+      ctx.fillStyle=`rgba(10,45,90,${.12+wave2*.05})`;ctx.fillRect(bx+6,by+Math.floor(TILE*.55),TILE-12,2);
       ctx.strokeStyle='rgba(10,40,80,.3)';ctx.lineWidth=.5;ctx.strokeRect(bx,by,TILE,TILE);
     }
     else{
-      // ICE FLOOR — organic, varied, slightly breathing
-      // Base color varies per tile
-      const iceBase=['#a8ccde','#bcd8e8','#d0e8f4','#e4f2fa'];
-      const base=iceBase[hp-1]||'#e4f2fa';
+      // Snowball mode: slightly warmer ice color
+      const iceBase=selectedMode==='snowball'
+        ?['#c8dce8','#d8eaf4','#e8f4fa','#f4faff']
+        :['#a8ccde','#bcd8e8','#d0e8f4','#e4f2fa'];
+      const base=iceBase[hp-1]||iceBase[3];
 
-      // Draw as slightly irregular quadrilateral (organic corners)
-      // Very subtle per-tile wobble
       const wb=wobble*.3;
-      const tlx=bx+tv.tl.x+wb, tly=by+tv.tl.y+wb;
-      const trx=bx+TILE+tv.tr.x-wb, try_=by+tv.tr.y+wb;
-      const blx=bx+tv.bl.x+wb, bly=by+TILE+tv.bl.y-wb;
-      const brx=bx+TILE+tv.br.x-wb, bry=by+TILE+tv.br.y-wb;
+      const tlx=bx+tv.tl.x+wb,tly=by+tv.tl.y+wb;
+      const trx=bx+TILE+tv.tr.x-wb,try_=by+tv.tr.y+wb;
+      const blx=bx+tv.bl.x+wb,bly=by+TILE+tv.bl.y-wb;
+      const brx=bx+TILE+tv.br.x-wb,bry=by+TILE+tv.br.y-wb;
 
-      ctx.beginPath();
-      ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);
-      ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);
-      ctx.closePath();
+      ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();
       ctx.fillStyle=base;ctx.fill();
 
-      // Surface brightness variation
-      ctx.globalAlpha=tv.bright*.18;
-      ctx.fillStyle='#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);
-      ctx.lineTo(brx-2,bry-TILE*.7);ctx.lineTo(tlx+2,tly+TILE*.25);
-      ctx.closePath();ctx.fill();
+      ctx.globalAlpha=tv.bright*.18;ctx.fillStyle='#ffffff';
+      ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx-2,bry-TILE*.7);ctx.lineTo(tlx+2,tly+TILE*.25);ctx.closePath();ctx.fill();
       ctx.globalAlpha=1;
 
-      // Subtle surface scratches (random per tile, always there)
       if(tv.scratch){
-        ctx.save();
-        ctx.strokeStyle=`rgba(80,130,170,${.12*tv.bright})`;
-        ctx.lineWidth=.6;
-        const sx=bx+TILE*.2+Math.cos(tv.scratchA)*tv.scratchL;
-        const sy=by+TILE*.3+Math.sin(tv.scratchA)*tv.scratchL;
-        ctx.beginPath();ctx.moveTo(bx+TILE*.2,by+TILE*.3);ctx.lineTo(sx,sy);ctx.stroke();
-        ctx.restore();
+        ctx.save();ctx.strokeStyle=`rgba(80,130,170,${.12*tv.bright})`;ctx.lineWidth=.6;
+        const sx=bx+TILE*.2+Math.cos(tv.scratchA)*tv.scratchL,sy=by+TILE*.3+Math.sin(tv.scratchA)*tv.scratchL;
+        ctx.beginPath();ctx.moveTo(bx+TILE*.2,by+TILE*.3);ctx.lineTo(sx,sy);ctx.stroke();ctx.restore();
       }
 
-      // Damage cracks
-      if(hp<=3){
-        ctx.strokeStyle=`rgba(60,110,160,${hp<=1?.75:hp<=2?.5:.28})`;
-        ctx.lineWidth=hp<=1?1.8:hp<=2?1.2:.7;
-        ctx.beginPath();
+      if(hp<=3&&selectedMode!=='snowball'){
+        ctx.strokeStyle=`rgba(60,110,160,${hp<=1?.75:hp<=2?.5:.28})`;ctx.lineWidth=hp<=1?1.8:hp<=2?1.2:.7;ctx.beginPath();
         ctx.moveTo(bx+9,by+11);ctx.lineTo(bx+23,by+23);ctx.moveTo(bx+23,by+23);ctx.lineTo(bx+17,by+38);
         if(hp<=2){ctx.moveTo(bx+31,by+7);ctx.lineTo(bx+17,by+27);}
-        if(hp<=1){ctx.moveTo(bx+3,by+3);ctx.lineTo(bx+TILE-3,by+TILE-3);ctx.moveTo(bx+TILE-3,by+3);ctx.lineTo(bx+3,by+TILE-3);}
+        if(hp<=1){ctx.moveTo(bx+3,by+3);ctx.lineTo(bx+TILE-3,by+TILE-3);}
         ctx.stroke();
       }
-
-      // Warning glow when about to break
-      if(tr>ICE_TREMOR*.5){
-        const g=(tr-ICE_TREMOR*.5)/(ICE_TREMOR*.5);
-        ctx.fillStyle=`rgba(255,90,20,${g*.3})`;
-        ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.fill();
-      }
-
-      // Very subtle tile edge (not a hard grid line)
+      if(tr>ICE_TREMOR*.5){const g=(tr-ICE_TREMOR*.5)/(ICE_TREMOR*.5);ctx.fillStyle=`rgba(255,90,20,${g*.3})`;ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.fill();}
       ctx.strokeStyle='rgba(160,210,235,.12)';ctx.lineWidth=.4;
       ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.stroke();
 
-      // Snowball paint
-      if(selectedMode==='snowball'&&paintGrid[r][c]!==0){
-        ctx.globalAlpha=.4;
-        ctx.fillStyle=paintGrid[r][c]===1?'#2860d0':'#d03020';
+      // Paint overlay
+      if(PAINT[r][c]!==0){
+        ctx.globalAlpha=.42;
+        ctx.fillStyle=PAINT[r][c]===1?'#2860d0':'#d03020';
         ctx.beginPath();ctx.moveTo(tlx,tly);ctx.lineTo(trx,try_);ctx.lineTo(brx,bry);ctx.lineTo(blx,bly);ctx.closePath();ctx.fill();
         ctx.globalAlpha=1;
       }
     }
   }
 
-  // Snowball/ice warning
+  // Ice warning (showdown only)
   if(icePhase===1&&selectedMode==='showdown'){const s=Math.ceil(icePhaseTimer/60),pulse=.8+Math.sin(Date.now()*.01)*.2;ctx.save();ctx.fillStyle=`rgba(255,120,40,${pulse})`;ctx.font='bold 14px Segoe UI';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=6;ctx.fillText(`⚠️ Ijs breekt in ${s}s!`,SW/2,52);ctx.restore();}
-  if(selectedMode==='snowball'&&running){const s=Math.ceil(sbTimer/60);ctx.save();ctx.fillStyle='rgba(200,240,255,.9)';ctx.font='bold 13px Segoe UI';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.fillText(`⏱️ ${s}s`,SW/2,52);ctx.restore();}
+
+  // Overtime overlay
+  drawSBOverlay();
 
   // Particles
   ctx.save();
@@ -787,17 +957,28 @@ function drawP(p){
 
 // MINIMAP
 function drawMM(){
-  const S=88;mmx.clearRect(0,0,S,S);const sc=S/GC;
-  for(let r=0;r<GR;r++)for(let c=0;c<GC;c++){
-    const cell=grid[r][c],hp=iceHP[r][c],paint=paintGrid[r][c];
+  const S=88;mmx.clearRect(0,0,S,S);
+  const isSB=selectedMode==='snowball';
+  const ROWS=isSB?SB_ROWS:GR, COLS=isSB?SB_COLS:GC;
+  const G=isSB?sbGrid:grid, P=isSB?sbPaint:paintGrid;
+  const scR=S/ROWS, scC=S/COLS;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const cell=G[r][c],hp=isSB?4:(iceHP[r]?.[c]||4),paint=P[r][c];
     if(cell===T_WALL)mmx.fillStyle='#2a3e5a';
     else if(hp<=0)mmx.fillStyle='#06121e';
-    else if(selectedMode==='snowball'&&paint===1)mmx.fillStyle='#3060c0';
-    else if(selectedMode==='snowball'&&paint===2)mmx.fillStyle='#c03030';
-    else mmx.fillStyle=hp<=2?'#7aaac4':hp<=3?'#98c0d8':'#d8f0ff';
-    mmx.fillRect(c*sc,r*sc,sc,sc);
+    else if(paint===1)mmx.fillStyle='#3060c0';
+    else if(paint===2)mmx.fillStyle='#c03030';
+    else mmx.fillStyle='#d8f0ff';
+    mmx.fillRect(c*scC,r*scR,scC,scR);
   }
-  for(const p of players){if(!p.alive)continue;mmx.fillStyle=selectedMode==='snowball'?(p.isP?'#3a80f0':'#e04040'):p.col;mmx.beginPath();mmx.arc(p.wx/TILE*sc,p.wy/TILE*sc,p.isP?3:2,0,Math.PI*2);mmx.fill();}
+  for(const p of players){
+    if(!p.alive)continue;
+    mmx.fillStyle=p.isP?'#5ac8fa':(isSB?'#e04040':p.col);
+    mmx.beginPath();mmx.arc(p.wx/TILE*scC,p.wy/TILE*scR,p.isP?3:2,0,Math.PI*2);mmx.fill();
+  }
+  const vx=(camX/TILE)*scC,vy=(camY/TILE)*scR,vw=(SW/TILE)*scC,vh=(SH/TILE)*scR;
+  mmx.strokeStyle='rgba(255,255,255,.35)';mmx.lineWidth=1;mmx.strokeRect(vx,vy,vw,vh);
+}
   const vx=(camX/TILE)*sc,vy=(camY/TILE)*sc,vw=(SW/TILE)*sc,vh=(SH/TILE)*sc;
   mmx.strokeStyle='rgba(255,255,255,.35)';mmx.lineWidth=1;mmx.strokeRect(vx,vy,vw,vh);
 }
@@ -854,7 +1035,7 @@ document.getElementById('btn-play').addEventListener('click',()=>{
   document.getElementById('btn-exit').style.display='block';
   document.getElementById('result-screen').style.display='none';
   if(isMob){document.getElementById('joystick-wrap').style.display='block';document.getElementById('shoot-btn').style.display='flex';}
-  initGrid();buildTileVar();spawnAll();initIce();initFishing();
+  initGrid();buildTileVar();initSBMap();spawnAll();initIce();initFishing();
   if(selectedMode==='snowball')initSB();
   const me=players[0];camX=me.wx-SW/2;camY=me.wy-SH/2;
   renderAmmo(me);running=true;
