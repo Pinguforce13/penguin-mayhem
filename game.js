@@ -582,6 +582,27 @@ function renderInv(){
   wrap.innerHTML=html;
 }
 
+// Pre-computed per-tile variation for showdown map
+let tileVar=[];
+function buildTileVar(){
+  tileVar=[];
+  for(let r=0;r<GR;r++){
+    tileVar[r]=[];
+    for(let c=0;c<GC;c++){
+      tileVar[r][c]={
+        tl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+        tr:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+        bl:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+        br:{x:(Math.random()-.5)*4,y:(Math.random()-.5)*4},
+        bright:.88+Math.random()*.24,
+        scratch:Math.random()>.6,
+        scratchA:Math.random()*Math.PI,
+        scratchL:8+Math.random()*20,
+      };
+    }
+  }
+}
+
 // CLASSES
 const CLS_DEF={
   surfer: {col:'#5ac8fa',hp:85, spd:2.2,fr:28,maxA:6,relT:120,dmg:14,bspd:7,name:'Surfer'},
