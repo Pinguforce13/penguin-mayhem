@@ -978,10 +978,6 @@ function drawMM(){
   }
   const vx=(camX/TILE)*scC,vy=(camY/TILE)*scR,vw=(SW/TILE)*scC,vh=(SH/TILE)*scR;
   mmx.strokeStyle='rgba(255,255,255,.35)';mmx.lineWidth=1;mmx.strokeRect(vx,vy,vw,vh);
-}
-  const vx=(camX/TILE)*sc,vy=(camY/TILE)*sc,vw=(SW/TILE)*sc,vh=(SH/TILE)*sc;
-  mmx.strokeStyle='rgba(255,255,255,.35)';mmx.lineWidth=1;mmx.strokeRect(vx,vy,vw,vh);
-}
 
 // HUD
 function renderAmmo(p){
